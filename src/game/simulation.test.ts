@@ -229,6 +229,64 @@ describe('GameSimulation 确定性与命令', () => {
     expect(left.hashState()).toBe(right.hashState());
   });
 
+  it('responds to facility damage during breakthrough deployment', () => {
+    const simulation = new GameSimulation(307, 'combat');
+    const artillery = simulation.state.units.find((unit) => unit.id === 'u-fixture-player');
+    const defender = simulation.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    const factory = simulation.state.buildings.find((building) => building.id === 'b-enemy-barracks');
+    expect(artillery).toBeDefined();
+    expect(defender).toBeDefined();
+    expect(factory).toBeDefined();
+    if (!artillery || !defender || !factory) return;
+
+    simulation.state.mission.kind = 'breakthrough';
+    simulation.state.mission.phase = 'deployment';
+    simulation.state.mission.phaseStartedTick = 0;
+    artillery.position = { x: 0, z: 0 };
+    artillery.kind = 'artillery';
+    artillery.radius = UNIT_DEFS.artillery.radius;
+    artillery.maxHp = UNIT_DEFS.artillery.maxHp;
+    artillery.hp = artillery.maxHp;
+    artillery.order = { type: 'attack', targetId: factory.id };
+    factory.position = { x: 0, z: 16 };
+    defender.position = { x: 0, z: 15 };
+    defender.order = { type: 'idle' };
+
+    stepTicks(simulation, 18);
+
+    expect(factory.hp).toBeLessThan(factory.maxHp);
+    expect(defender.order.type).toBe('attackMove');
+    expect(defender.order.target).toEqual({ x: 0, z: 0 });
+  });
+
+  it('mobilizes local guards when another enemy observer can already see the attacker', () => {
+    const simulation = new GameSimulation(308, 'combat');
+    const artillery = simulation.state.units.find((unit) => unit.id === 'u-fixture-player');
+    const defender = simulation.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    const factory = simulation.state.buildings.find((building) => building.id === 'b-enemy-barracks');
+    expect(artillery).toBeDefined();
+    expect(defender).toBeDefined();
+    expect(factory).toBeDefined();
+    if (!artillery || !defender || !factory) return;
+
+    artillery.position = { x: 0, z: 0 };
+    artillery.kind = 'artillery';
+    artillery.radius = UNIT_DEFS.artillery.radius;
+    artillery.maxHp = UNIT_DEFS.artillery.maxHp;
+    artillery.hp = artillery.maxHp;
+    artillery.order = { type: 'attack', targetId: factory.id };
+    factory.position = { x: 0, z: 16 };
+    defender.position = { x: 0, z: 2 };
+    defender.order = { type: 'idle' };
+
+    stepTicks(simulation, 18);
+
+    expect(simulation.state.intel.enemy.visibleEnemyIds).toContain(artillery.id);
+    expect(factory.hp).toBeLessThan(factory.maxHp);
+    expect(defender.order.type).toBe('attackMove');
+    expect(defender.order.target).toEqual({ x: 0, z: 0 });
+  });
+
   it('destroys the four ruin-review buildings through deterministic disclosed simulation combat', () => {
     const fixtures = ['building-ruin-review', 'building-ruin-review-reduced'];
     const expectedTargets = [

@@ -107,6 +107,7 @@ const ENEMY_COMBAT_RESPONSE_RADIUS = 34;
 const ENEMY_COMBAT_RESPONSE_HQ_RADIUS = 42;
 const ENEMY_COMBAT_RESPONSE_MAX_UNITS = 4;
 const ENEMY_COMBAT_RESPONSE_HQ_MAX_UNITS = 6;
+const BREAKTHROUGH_EARLY_RESPONSE_MAX_UNITS = 2;
 const ENEMY_COMBAT_RETURN_DISTANCE = 0.75;
 const BASE_BUILDING_SIGHT = 7;
 const HQ_RADAR_RANGE = 18;
@@ -963,8 +964,6 @@ export class GameSimulation {
       return;
     }
     if (candidate.team === 'enemy' && impact.team === 'player') {
-      if (this.isEnemyVisibleTo('enemy', impact.sourceId)) return;
-      if (this.state.mission.kind === 'breakthrough' && this.state.mission.phase !== 'command') return;
       this.registerEnemyCombatResponse(candidate, impact.sourceAt);
     }
   }
@@ -999,15 +998,23 @@ export class GameSimulation {
     if (!finiteVec(contact)) return;
     const hqUnderAttack = candidate.entityType === 'building' && candidate.kind === 'hq';
     const responseRadius = hqUnderAttack ? ENEMY_COMBAT_RESPONSE_HQ_RADIUS : ENEMY_COMBAT_RESPONSE_RADIUS;
-    const maximumResponders = hqUnderAttack
+    const normalMaximumResponders = hqUnderAttack
       ? ENEMY_COMBAT_RESPONSE_HQ_MAX_UNITS
       : ENEMY_COMBAT_RESPONSE_MAX_UNITS;
+    const maximumResponders = this.state.mission.kind === 'breakthrough'
+      && this.state.mission.phase !== 'command'
+      ? Math.min(normalMaximumResponders, BREAKTHROUGH_EARLY_RESPONSE_MAX_UNITS)
+      : normalMaximumResponders;
     const responders = stableById(this.state.units.filter((unit) => (
       unit.team === 'enemy'
       && unit.hp > 0
       && UNIT_DEFS[unit.kind].damage > 0
       && distance(unit.position, candidate.position) <= responseRadius
-      && (unit.order.type === 'idle' || this.enemyCombatResponses.has(unit.id))
+      && (
+        unit.order.type === 'idle'
+        || unit.order.type === 'move'
+        || this.enemyCombatResponses.has(unit.id)
+      )
     ))).sort((left, right) => {
       const distanceDifference = distanceSquared(left.position, candidate.position)
         - distanceSquared(right.position, candidate.position);
