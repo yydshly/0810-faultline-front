@@ -4,6 +4,7 @@ import { GameAudio } from './game/audio';
 import { visibleStageEdgePanDirection } from './game/camera-edge';
 import {
   breakthroughFixtureForDifficulty,
+  canStartBreakthroughDeploymentInPlace,
   isPlayableBreakthroughFixture,
   resolveBreakthroughDifficultyId,
   type BreakthroughDifficultyId,
@@ -143,7 +144,7 @@ class FaultlineApp {
       },
       onSelectEntity: (id) => this.selectFromHud(id),
       onMinimapNavigate: (point) => this.navigateFromMinimap(point),
-      onDeployDifficulty: (difficulty) => this.deployDifficulty(difficulty),
+      onDeployDifficulty: (difficulty, mode) => this.deployDifficulty(difficulty, mode),
       onResumeSavedDeployment: savedDeployment
         ? () => this.resumeSavedDeployment(savedDeployment)
         : undefined,
@@ -825,17 +826,40 @@ class FaultlineApp {
     this.drag = null;
   }
 
-  private deployDifficulty(difficulty: BreakthroughDifficultyId): void {
+  private deployDifficulty(
+    difficulty: BreakthroughDifficultyId,
+    mode: 'initial' | 'change',
+  ): boolean {
     const reduced = this.fixture.endsWith('-reduced');
+    const targetFixture = breakthroughFixtureForDifficulty(difficulty, reduced);
     const url = new URL(window.location.href);
-    url.searchParams.set('fixture', breakthroughFixtureForDifficulty(difficulty, reduced));
+    url.searchParams.set('fixture', targetFixture);
     url.searchParams.set('seed', String(this.seed));
     url.searchParams.set('quality', this.renderQuality);
-    url.searchParams.set('deploy', '1');
     url.searchParams.delete('fallback');
     url.searchParams.delete('resume');
     url.searchParams.delete('resumeTick');
+
+    // The root briefing already owns a fully constructed tick-zero standard
+    // battlefield. Starting that same difficulty in place preserves decoded
+    // GLBs, GPU resources and the verified asset ledger instead of paying for
+    // a second page load. A difficulty change or any progressed match still
+    // follows the canonical navigation/rebuild path.
+    if (canStartBreakthroughDeploymentInPlace(
+      this.fixture,
+      targetFixture,
+      this.simulation.state.tick,
+      this.simulation.state.status,
+      mode,
+    )) {
+      url.searchParams.delete('deploy');
+      window.history.replaceState(null, '', url);
+      return true;
+    }
+
+    url.searchParams.set('deploy', '1');
     window.location.replace(url.toString());
+    return false;
   }
 
   private resumeSavedDeployment(summary: SavedDeploymentSummary): void {

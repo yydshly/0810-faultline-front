@@ -21,9 +21,13 @@ import {
   IncrementalAssetLoadLedger,
   authoredAssetAllowlist,
   authoredAssetPhasePlan,
+  authoredBreakthroughRuntimePhasePlan,
+  authoredBreakthroughStreamingPhasePlan,
   authoredBuildingAssetLabel,
+  collectBreakthroughMissionPrefetchLabels,
   collectEntityAuthoredAssetLabels,
   collectLevelAuthoredAssetLabels,
+  collectPresentationAuthoredAssetLabels,
   type AuthoredAssetPhasePlan,
 } from './asset-dependencies';
 import { LEVEL_ANCHORS } from './level';
@@ -70,8 +74,12 @@ export {
   IncrementalAssetLoadLedger,
   authoredAssetAllowlist,
   authoredAssetPhasePlan,
+  authoredBreakthroughRuntimePhasePlan,
+  authoredBreakthroughStreamingPhasePlan,
+  collectBreakthroughMissionPrefetchLabels,
   collectEntityAuthoredAssetLabels,
   collectLevelAuthoredAssetLabels,
+  collectPresentationAuthoredAssetLabels,
 } from './asset-dependencies';
 
 export interface ScreenPoint {
@@ -2279,10 +2287,20 @@ export class BattlefieldScene {
   private readonly assetLoadLedger = new IncrementalAssetLoadLedger();
   private readonly assetLoaderReady: Promise<void>;
   private assetPhaseTail: Promise<void> = Promise.resolve();
+  private assetStreamingTail: Promise<void> = Promise.resolve();
+  private assetPriorityTail: Promise<void> = Promise.resolve();
   private readonly assetPhaseHistory: string[] = [];
+  private readonly activeAssetPhases = new Map<string, number>();
+  private readonly priorityAssetLabels = new Set<string>();
+  private readonly assetCriticalLabels = new Set<string>();
   private assetPhaseCurrent = 'idle';
   private assetPhaseCompleted = 0;
   private initialAssetRequirementsQueued = false;
+  private breakthroughStreamingRequirementsQueued = false;
+  private prioritizeNextAssetEnsure = false;
+  private assetCriticalRequested = 0;
+  private assetCriticalSettledTime = -1;
+  private assetCriticalFailed = 0;
   private materialConflictCount = 0;
   private materialCrossOwnerReuse = 0;
   private lodSwitches = 0;
@@ -2706,6 +2724,7 @@ export class BattlefieldScene {
     this.entityVisuals.clear();
     this.pickables.clear();
     this.dustTrackers.clear();
+    this.prioritizeNextAssetEnsure = true;
 
     const metrics = createPresentationSessionMetricState();
     this.socketShots = metrics.socketShots;
@@ -5235,13 +5254,47 @@ export class BattlefieldScene {
       return;
     }
     if (authoredAssetAllowlist(this.fixture)) return;
-    this.queueEnsureAssets([
-      ...collectEntityAuthoredAssetLabels(state),
+
+    const streamingPhases = authoredBreakthroughStreamingPhasePlan(this.fixture);
+    const entityLabels = streamingPhases.length > 0
+      ? collectPresentationAuthoredAssetLabels(state)
+      : collectEntityAuthoredAssetLabels(state);
+    const ensureLabels = [
+      ...entityLabels,
+      ...collectBreakthroughMissionPrefetchLabels(this.fixture, state),
       ...collectLevelAuthoredAssetLabels(state),
-    ]);
+    ];
+
+    if (this.prioritizeNextAssetEnsure) {
+      this.prioritizeNextAssetEnsure = false;
+      this.queueEnsureAssets(ensureLabels, 'priority', true);
+    }
+
+    if (
+      state.tick > 0
+      && !this.breakthroughStreamingRequirementsQueued
+      && streamingPhases.length > 0
+    ) {
+      this.breakthroughStreamingRequirementsQueued = true;
+      // A restored match may disclose late-game entities before the static
+      // stream has been registered. Give that authoritative presentation set
+      // first position on the independent stream, then flow front -> rear ->
+      // dressing. Normal tick-zero starts usually add no work here because the
+      // player's opening force is already reserved by the critical phase.
+      for (const phase of authoredBreakthroughRuntimePhasePlan(this.fixture, state)) {
+        this.queueAssetPhase(phase, 'streaming');
+      }
+      return;
+    }
+
+    this.queueEnsureAssets(ensureLabels, streamingPhases.length > 0 ? 'streaming' : 'main');
   }
 
-  private queueEnsureAssets(labels: Iterable<string>): void {
+  private queueEnsureAssets(
+    labels: Iterable<string>,
+    lane: 'main' | 'streaming' | 'priority' = 'main',
+    includeQueued = false,
+  ): void {
     const reviewAllowlist = authoredAssetAllowlist(this.fixture);
     const requested = reviewAllowlist
       ? [...labels].filter((label) => reviewAllowlist.has(label))
@@ -5251,30 +5304,65 @@ export class BattlefieldScene {
       labels: requested,
       concurrency: 2,
       deferred: false,
-    });
+    }, lane, includeQueued);
   }
 
-  private queueAssetPhase(phase: AuthoredAssetPhasePlan): Promise<void> {
-    const labels = this.assetLoadLedger.queue(phase.labels);
-    if (labels.length === 0) return this.assetPhaseTail;
-    this.assetLoadRequested += labels.length;
+  private setAssetPhaseActivity(name: string, active: boolean): void {
+    const count = this.activeAssetPhases.get(name) ?? 0;
+    if (active) this.activeAssetPhases.set(name, count + 1);
+    else if (count <= 1) this.activeAssetPhases.delete(name);
+    else this.activeAssetPhases.set(name, count - 1);
+    this.assetPhaseCurrent = this.activeAssetPhases.size > 0
+      ? [...this.activeAssetPhases.keys()].join('+')
+      : 'idle';
+    this.updateAssetLoadMetrics();
+  }
+
+  private queueAssetPhase(
+    phase: AuthoredAssetPhasePlan,
+    lane: 'main' | 'streaming' | 'priority' = 'main',
+    includeQueued = false,
+  ): Promise<void> {
+    const newlyQueued = this.assetLoadLedger.queue(phase.labels);
+    const labels = includeQueued
+      // Keep opening-critical work on the main lane so its ready metric cannot settle before those labels finish.
+      ? this.assetLoadLedger.queuedLabels(phase.labels).filter((label) => (
+        !this.priorityAssetLabels.has(label)
+        && !this.assetCriticalLabels.has(label)
+      ))
+      : newlyQueued;
+    const currentTail = lane === 'streaming'
+      ? this.assetStreamingTail
+      : lane === 'priority'
+        ? this.assetPriorityTail
+        : this.assetPhaseTail;
+    if (labels.length === 0) return currentTail;
+    if (lane === 'priority') {
+      for (const label of labels) this.priorityAssetLabels.add(label);
+    }
+    if (phase.name === 'critical' && this.assetCriticalRequested === 0) {
+      this.assetCriticalRequested = labels.length;
+      for (const label of labels) this.assetCriticalLabels.add(label);
+    }
+    this.assetLoadRequested += newlyQueued.length;
     this.assetPhaseHistory.push(phase.name);
     this.updateAssetLoadMetrics();
 
     const runPhase = async (): Promise<void> => {
+      const waitingName = `${phase.name}:waiting`;
       try {
         await this.assetLoaderReady;
         if (this.disposed) return;
         if (phase.deferred) {
-          this.assetPhaseCurrent = `${phase.name}:waiting`;
-          this.updateAssetLoadMetrics();
+          this.setAssetPhaseActivity(waitingName, true);
           await new Promise<void>((resolve) => this.hostWindow.setTimeout(resolve, 80));
+          this.setAssetPhaseActivity(waitingName, false);
           if (this.disposed) return;
         }
-        this.assetPhaseCurrent = phase.name;
-        this.updateAssetLoadMetrics();
+        this.setAssetPhaseActivity(phase.name, true);
         await runBoundedAssetTasks(
           labels.map((label) => async () => {
+            if (lane !== 'priority' && this.priorityAssetLabels.has(label)) return;
             const task = this.authoredAssetTasks.get(label);
             if (task) {
               await task.run();
@@ -5292,6 +5380,7 @@ export class BattlefieldScene {
       } finally {
         if (this.disposed) return;
         for (const label of labels) {
+          if (lane !== 'priority' && this.priorityAssetLabels.has(label)) continue;
           const failedInflight = this.assetLoadLedger.fail(label);
           const failedQueued = !failedInflight
             && this.assetLoadLedger.start(label)
@@ -5299,11 +5388,30 @@ export class BattlefieldScene {
           if (failedInflight || failedQueued) this.assetLoadFailed += 1;
         }
         this.assetPhaseCompleted += 1;
-        this.assetPhaseCurrent = 'idle';
-        this.updateAssetLoadMetrics();
+        if (phase.name === 'critical' && this.assetCriticalSettledTime < 0) {
+          this.assetCriticalFailed = this.assetLoadLedger.failedCount(labels);
+          this.assetCriticalSettledTime = this.hostWindow.performance.now() - this.assetLoadStartTime;
+          this.hostWindow.performance.mark('faultline-front:asset-critical-settled');
+          if (this.assetCriticalFailed === 0) {
+            this.hostWindow.performance.mark('faultline-front:asset-critical-ready');
+          }
+        }
+        this.setAssetPhaseActivity(waitingName, false);
+        this.setAssetPhaseActivity(phase.name, false);
+        if (lane === 'priority') {
+          for (const label of labels) this.priorityAssetLabels.delete(label);
+        }
       }
     };
 
+    if (lane === 'priority') {
+      this.assetPriorityTail = this.assetPriorityTail.catch(() => undefined).then(runPhase);
+      return this.assetPriorityTail;
+    }
+    if (lane === 'streaming') {
+      this.assetStreamingTail = this.assetStreamingTail.catch(() => undefined).then(runPhase);
+      return this.assetStreamingTail;
+    }
     this.assetPhaseTail = this.assetPhaseTail.catch(() => undefined).then(runPhase);
     return this.assetPhaseTail;
   }
@@ -5422,6 +5530,7 @@ export class BattlefieldScene {
                   this.assetLoadCompleted += 1;
                   if (this.firstAuthoredAssetTime < 0) {
                     this.firstAuthoredAssetTime = this.hostWindow.performance.now() - this.assetLoadStartTime;
+                    this.hostWindow.performance.mark('faultline-front:first-authored-asset');
                   }
                   this.updateAssetLoadMetrics();
                   resolve();
@@ -5687,6 +5796,14 @@ export class BattlefieldScene {
     canvas.dataset.assetLoadFirstMs = this.firstAuthoredAssetTime < 0
       ? ''
       : String(Math.round(this.firstAuthoredAssetTime));
+    canvas.dataset.assetLoadCriticalRequested = String(this.assetCriticalRequested);
+    canvas.dataset.assetLoadCriticalFailed = String(this.assetCriticalFailed);
+    canvas.dataset.assetLoadCriticalSettledMs = this.assetCriticalSettledTime < 0
+      ? ''
+      : String(Math.round(this.assetCriticalSettledTime));
+    canvas.dataset.assetLoadCriticalReadyMs = this.assetCriticalSettledTime < 0 || this.assetCriticalFailed > 0
+      ? ''
+      : String(Math.round(this.assetCriticalSettledTime));
     canvas.dataset.assetLoadStatus = snapshot.queued === 0
       && snapshot.inflight === 0
       && this.assetPhaseCompleted >= this.assetPhaseHistory.length

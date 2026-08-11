@@ -108,6 +108,20 @@ export function isPlayableBreakthroughFixture(fixture: string): boolean {
   return /^breakthrough-demo(?:-(?:cadet|veteran))?(?:-reduced)?$/u.test(fixture);
 }
 
+export function canStartBreakthroughDeploymentInPlace(
+  currentFixture: string,
+  targetFixture: string,
+  tick: number,
+  status: 'active' | 'victory' | 'defeat',
+  mode: 'initial' | 'change',
+): boolean {
+  return currentFixture === targetFixture
+    && isPlayableBreakthroughFixture(currentFixture)
+    && tick === 0
+    && status === 'active'
+    && mode === 'initial';
+}
+
 export function breakthroughFixtureForDifficulty(
   id: BreakthroughDifficultyId,
   reduced = false,

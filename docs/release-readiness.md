@@ -20,7 +20,7 @@
 
 项目源码现已纳入 [GitHub 仓库](https://github.com/yydshly/0810-faultline-front)并以版本标签管理。2026-08-09 生成的既有候选包早于仓库初始化，因此其包内清单仍如实记录 `commit: null` 和 `identity: unversioned-verified-dist`；它是经过验证的历史基线，但不应被误述为提交绑定制品。仓库建立后重新运行打包脚本时，清单会自动记录当前提交、分支、精确标签与工作树状态。
 
-远端使用 [Quality Gate](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml) 在 `main` 推送和 Pull Request 上执行锁定依赖安装、TypeScript、319 项确定性测试、生产构建、42 项运行时 GLB/KTX2 合同与校验器 mutation 测试。Quality Gate 成功后，[Deploy Pages](https://github.com/yydshly/0810-faultline-front/actions/workflows/pages.yml) 检出同一 SHA，以仓库子路径构建并通过 GitHub Pages OIDC 部署；版本制品仍发布到 [GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)，ZIP 与同名 `.sha256` 必须成对上传。
+远端使用 [Quality Gate](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml) 在 `main` 推送和 Pull Request 上执行锁定依赖安装、TypeScript、331 项确定性测试、生产构建、42 项运行时 GLB/KTX2 合同与校验器 mutation 测试。Quality Gate 成功后，[Deploy Pages](https://github.com/yydshly/0810-faultline-front/actions/workflows/pages.yml) 检出同一 SHA，以仓库子路径构建并通过 GitHub Pages OIDC 部署；版本制品仍发布到 [GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)，ZIP 与同名 `.sha256` 必须成对上传。
 
 ## 制作发布包
 
@@ -67,7 +67,7 @@ npm run preview -- --port 4180
 ## 当前验证基线
 
 - 默认入口先在 00:00 显示三档任务简报；存在有效突破战存档时额外显示保存难度与作战时间并优先聚焦“继续上次战况”。续战锁定存档场景、种子与模拟刻，成功后清除一次性地址参数，失效时安全回到新战局简报。
-- 最近一次完整门禁为 33 个测试文件、319 项测试通过；42/42 GLB 资产合同通过，其中 17 件有纹理资产满足 KTX2 合同、25 件为无贴图 PBR；TypeScript 与 Vite 36 modules 生产构建通过。
+- 最近一次完整门禁为 33 个测试文件、331 项测试通过；42/42 GLB 资产合同通过，其中 17 件有纹理资产满足 KTX2 合同、25 件为无贴图 PBR；TypeScript 与 Vite 36 modules 生产构建通过。
 - 公网冷启动加载 40/40 个当前突破战请求资产，失败 0、重试 0、材质冲突 0；Basis JS/WASM 与模型均来自 `/0810-faultline-front/assets/`，控制台 warning/error 为 0。标准战局启动、保存、返回根简报和继续战况均通过。
 - 当前 Vite 构建仍会提示 Three.js 分包压缩前 549.65 kB，属于已知非阻塞提示。公网首件模型冷启动记录为 5.762 秒，完整 40 件资产约 30 秒完成；后续应继续测量慢网、缓存命中、帧时间和内存，而不是把绘制调用数等同于线上 FPS。
 - 完整公网部署证据见 [GitHub Pages 部署与线上验收](github-pages-deployment.md)。

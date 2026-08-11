@@ -5,7 +5,11 @@ import {
   IncrementalAssetLoadLedger,
   authoredAssetAllowlist,
   authoredAssetPhasePlan,
+  authoredBreakthroughRuntimePhasePlan,
+  authoredBreakthroughStreamingPhasePlan,
+  collectBreakthroughMissionPrefetchLabels,
   collectEntityAuthoredAssetLabels,
+  collectPresentationAuthoredAssetLabels,
   runBoundedAssetTasks,
 } from './scene';
 
@@ -193,24 +197,151 @@ describe('bounded authored asset loading', () => {
     expect(labels).toContain('FF-SUP-01');
   });
 
-  it('loads breakthrough entities and level assets before deferred low-concurrency dressing', () => {
+  it('prioritizes the visible opening force before level and post-start streaming', () => {
+    const state = createInitialGameState(1949, 'breakthrough-demo');
     const plan = authoredAssetPhasePlan(
       'breakthrough-demo',
-      createInitialGameState(1949, 'breakthrough-demo'),
+      state,
     );
-    expect(plan.map((phase) => phase.name)).toEqual(['critical', 'level', 'dressing']);
-    expect(plan.map((phase) => phase.concurrency)).toEqual([4, 3, 2]);
-    expect(plan.map((phase) => phase.deferred)).toEqual([false, false, true]);
-    expect(plan[0]?.labels).toContain('FF-EN-CAN-01');
-    expect(plan[0]?.labels).toEqual(expect.arrayContaining([
+    expect(plan.map((phase) => phase.name)).toEqual(['critical', 'level']);
+    expect(plan.map((phase) => phase.concurrency)).toEqual([4, 3]);
+    expect(plan.map((phase) => phase.deferred)).toEqual([false, false]);
+    expect(plan[0]?.labels).toEqual([
+      'FF-SCT-01',
       'FF-SEN-01',
+      'FF-CAN-01',
+      'FF-REL-01',
+      'FF-MBT-01',
+      'FF-HRV-01',
+      'FF-REF-01',
+      'FF-HQ-01',
+      'FF-FAC-01',
+      'FF-RIF-01',
+      'FF-ENG-01',
+      'FF-AT-01',
+      'FF-RCT-01',
+      'FF-BAR-01',
+      'FF-SUP-01',
+      'FF-ART-01',
+    ]);
+    expect(plan[0]?.labels).not.toContain('FF-EN-CAN-01');
+    expect(plan[0]?.labels).not.toContain('FF-EN-HQ-01');
+    expect(plan[1]?.labels).toEqual(['FF-ROK-01', 'FF-ORE-01']);
+    expect(new Set(plan.flatMap((phase) => phase.labels))).toHaveLength(18);
+
+    const streaming = authoredBreakthroughStreamingPhasePlan('breakthrough-demo');
+    expect(streaming).toHaveLength(3);
+    expect(streaming[0]).toMatchObject({ name: 'frontline', concurrency: 2, deferred: true });
+    expect(streaming[0]?.labels).toEqual([
+      'FF-EN-SCT-01',
+      'FF-EN-SEN-01',
+      'FF-EN-CAN-01',
+      'FF-EN-REL-01',
+      'FF-EN-FAC-01',
+      'FF-EN-ART-01',
+      'FF-EN-SUP-01',
+      'FF-EN-RIF-01',
+      'FF-EN-AT-01',
+      'FF-EN-MBT-01',
+    ]);
+    expect(streaming[1]).toMatchObject({ name: 'rear', concurrency: 2, deferred: true });
+    expect(streaming[1]?.labels).toEqual([
+      'FF-EN-HRV-01',
+      'FF-EN-HQ-01',
+      'FF-EN-REF-01',
+      'FF-EN-RCT-01',
+      'FF-EN-BAR-01',
+    ]);
+    expect(streaming[2]).toMatchObject({ name: 'dressing', concurrency: 1, deferred: true });
+    expect(streaming[2]?.labels).toContain('FF-STM-01');
+    expect(new Set([
+      ...plan.flatMap((phase) => phase.labels),
+      ...streaming.flatMap((phase) => phase.labels),
+    ])).toHaveLength(41);
+  });
+
+  it('does not request fog-hidden enemy masters until disclosure', () => {
+    const state = createInitialGameState(1949, 'breakthrough-demo');
+    const hidden = collectPresentationAuthoredAssetLabels(state);
+    expect(hidden).toContain('FF-MBT-01');
+    expect(hidden).not.toContain('FF-EN-MBT-01');
+    expect(hidden).not.toContain('FF-EN-HQ-01');
+
+    state.intel.player.visibleEnemyIds = ['u-break-enemy-tank', 'b-break-enemy-sentry'];
+    const disclosed = collectPresentationAuthoredAssetLabels(state);
+    expect(disclosed).toContain('FF-EN-MBT-01');
+    expect(disclosed).toContain('FF-EN-SEN-01');
+    expect(disclosed).not.toContain('FF-EN-HQ-01');
+  });
+
+  it('prefetches the next scripted waves before they spawn', () => {
+    const state = createInitialGameState(1949, 'breakthrough-demo');
+    expect(collectBreakthroughMissionPrefetchLabels('breakthrough-demo', state)).toEqual([]);
+
+    state.mission.phase = 'frontline';
+    const frontline = collectBreakthroughMissionPrefetchLabels('breakthrough-demo', state);
+    expect(frontline).toEqual(expect.arrayContaining([
       'FF-ART-01',
       'FF-SUP-01',
       'FF-EN-SUP-01',
+      'FF-EN-MBT-01',
+      'FF-EN-AT-01',
     ]));
-    expect(plan[1]?.labels).toEqual(['FF-ROK-01', 'FF-ORE-01']);
-    expect(plan[2]?.labels).toContain('FF-STM-01');
-    expect(new Set(plan.flatMap((phase) => phase.labels))).toHaveLength(40);
+    expect(frontline).not.toContain('FF-EN-HQ-01');
+
+    state.mission.phase = 'counterattack';
+    const counterattack = collectBreakthroughMissionPrefetchLabels('breakthrough-demo', state);
+    expect(counterattack).toEqual(expect.arrayContaining([
+      'FF-EN-HRV-01',
+      'FF-EN-HQ-01',
+      'FF-EN-REF-01',
+      'FF-EN-RCT-01',
+      'FF-EN-BAR-01',
+    ]));
+    expect(collectBreakthroughMissionPrefetchLabels('default', state)).toEqual([]);
+  });
+
+  it('promotes a resumed late mission phase into the first critical batch', () => {
+    const state = createInitialGameState(1949, 'breakthrough-demo-veteran');
+    state.tick = 9_000;
+    state.mission.phase = 'counterattack';
+    const critical = authoredAssetPhasePlan('breakthrough-demo-veteran', state)[0];
+    expect(critical?.name).toBe('critical');
+    expect(critical?.labels).toEqual(expect.arrayContaining([
+      'FF-EN-HRV-01',
+      'FF-EN-HQ-01',
+      'FF-EN-REF-01',
+      'FF-EN-RCT-01',
+      'FF-EN-BAR-01',
+      'FF-EN-SUP-01',
+      'FF-ART-01',
+    ]));
+  });
+
+  it('puts restored visible and mission assets ahead of static streaming phases', () => {
+    const state = createInitialGameState(1949, 'breakthrough-demo');
+    state.tick = 7_200;
+    state.mission.phase = 'counterattack';
+    const visibleCannon = state.buildings.find((building) => building.team === 'enemy' && building.kind === 'cannon');
+    expect(visibleCannon).toBeDefined();
+    state.intel.player.visibleEnemyIds = [visibleCannon!.id];
+
+    const plan = authoredBreakthroughRuntimePhasePlan('breakthrough-demo', state);
+    expect(plan.map((phase) => phase.name)).toEqual(['ensure', 'frontline', 'rear', 'dressing']);
+    expect(plan[0]?.labels).toEqual(expect.arrayContaining([
+      'FF-EN-HQ-01',
+      'FF-EN-CAN-01',
+      'FF-EN-HRV-01',
+      'FF-EN-REF-01',
+      'FF-EN-RCT-01',
+      'FF-EN-BAR-01',
+      'FF-EN-SUP-01',
+      'FF-ART-01',
+    ]));
+    expect(authoredBreakthroughRuntimePhasePlan('breakthrough-demo', {
+      ...state,
+      tick: 0,
+    })).toEqual([]);
   });
 
   it('never exceeds the configured concurrency while completing every task', async () => {
@@ -252,6 +383,19 @@ describe('bounded authored asset loading', () => {
     expect(ledger.snapshot()).toMatchObject({ queued: 0, inflight: 0, loaded: 1, failed: 0 });
   });
 
+  it('preserves authored phase priority while deduplicating', () => {
+    const ledger = new IncrementalAssetLoadLedger();
+    expect(ledger.queue(['FF-SCT-01', 'FF-SEN-01', 'FF-MBT-01', 'FF-SCT-01'])).toEqual([
+      'FF-SCT-01',
+      'FF-SEN-01',
+      'FF-MBT-01',
+    ]);
+    expect(ledger.queuedLabels(['FF-MBT-01', 'FF-SCT-01', 'FF-MBT-01'])).toEqual([
+      'FF-MBT-01',
+      'FF-SCT-01',
+    ]);
+  });
+
   it('allows one failed network retry but records a terminal second failure', () => {
     const ledger = new IncrementalAssetLoadLedger();
     ledger.queue(['FF-ORE-01']);
@@ -261,6 +405,7 @@ describe('bounded authored asset loading', () => {
     expect(ledger.retry('FF-ORE-01', 2)).toBe(false);
     expect(ledger.fail('FF-ORE-01')).toBe(true);
     expect(ledger.queue(['FF-ORE-01'])).toEqual([]);
+    expect(ledger.failedCount(['FF-ORE-01', 'FF-ORE-01', 'FF-ROK-01'])).toBe(1);
     expect(ledger.snapshot()).toMatchObject({ queued: 0, inflight: 0, loaded: 0, failed: 1 });
   });
 

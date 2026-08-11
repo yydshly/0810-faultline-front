@@ -1,8 +1,9 @@
 import type { BuildingKind, GameState, Team, UnitKind } from './types';
+import { getBreakthroughDifficulty, isPlayableBreakthroughFixture } from './difficulty';
 
 type CombatTeam = Exclude<Team, 'neutral'>;
 
-export type AuthoredAssetPhaseName = 'review' | 'critical' | 'level' | 'dressing' | 'ensure';
+export type AuthoredAssetPhaseName = 'review' | 'critical' | 'level' | 'frontline' | 'rear' | 'dressing' | 'ensure';
 
 export interface AuthoredAssetPhasePlan {
   name: AuthoredAssetPhaseName;
@@ -68,14 +69,50 @@ export const AUTHORED_DRESSING_ASSETS = Object.freeze([
   'FF-STM-01',
 ] as const);
 
-// The golden breakthrough route creates these during preparation and its
-// scripted waves. Preload them with the opening force so a phase transition
-// never has to display a procedural fallback while its authored GLB arrives.
-const BREAKTHROUGH_MISSION_ASSETS = Object.freeze([
+// The opening frame used to begin with four of the largest textured GLBs.
+// Keep a deterministic, gameplay-motivated order so a lightweight authored
+// silhouette arrives first while the iconic tank and the economy pair still
+// remain in the first bounded phase.
+const BREAKTHROUGH_OPENING_PRIORITY = Object.freeze([
+  PLAYER_UNIT_ASSETS.scout,
   PLAYER_BUILDING_ASSETS.sentry,
-  PLAYER_UNIT_ASSETS.artillery,
-  PLAYER_UNIT_ASSETS.suppressor,
+  PLAYER_BUILDING_ASSETS.cannon,
+  PLAYER_BUILDING_ASSETS.relay,
+  PLAYER_UNIT_ASSETS.tank,
+  PLAYER_UNIT_ASSETS.harvester,
+  PLAYER_BUILDING_ASSETS.refinery,
+  PLAYER_BUILDING_ASSETS.hq,
+  PLAYER_BUILDING_ASSETS.factory,
+  PLAYER_UNIT_ASSETS.rifle,
+  PLAYER_UNIT_ASSETS.engineer,
+  PLAYER_UNIT_ASSETS.antitank,
+  PLAYER_BUILDING_ASSETS.reactor,
+  PLAYER_BUILDING_ASSETS.barracks,
+] as const);
+
+// These are the authored silhouettes a normal player can meet on the first
+// approach to the scripted front. They stream only after the first simulation
+// tick, so the 00:00 deployment briefing gives all bandwidth to the player's
+// visible base and opening force.
+const BREAKTHROUGH_FRONTLINE_ASSETS = Object.freeze([
+  ENEMY_UNIT_ASSETS.scout,
+  ENEMY_BUILDING_ASSETS.sentry,
+  ENEMY_BUILDING_ASSETS.cannon,
+  ENEMY_BUILDING_ASSETS.relay,
+  ENEMY_BUILDING_ASSETS.factory,
+  ENEMY_UNIT_ASSETS.artillery,
   ENEMY_UNIT_ASSETS.suppressor,
+  ENEMY_UNIT_ASSETS.rifle,
+  ENEMY_UNIT_ASSETS.antitank,
+  ENEMY_UNIT_ASSETS.tank,
+] as const);
+
+const BREAKTHROUGH_ENEMY_BASE_ASSETS = Object.freeze([
+  ENEMY_UNIT_ASSETS.harvester,
+  ENEMY_BUILDING_ASSETS.hq,
+  ENEMY_BUILDING_ASSETS.refinery,
+  ENEMY_BUILDING_ASSETS.reactor,
+  ENEMY_BUILDING_ASSETS.barracks,
 ] as const);
 
 export const AUTHORED_ASSET_CATALOG_ORDER = Object.freeze([
@@ -94,6 +131,18 @@ const orderedUnique = (labels: Iterable<string>): string[] => [...new Set(labels
   const rightIndex = CATALOG_INDEX.get(right) ?? Number.MAX_SAFE_INTEGER;
   return leftIndex - rightIndex || left.localeCompare(right);
 });
+
+const stableUnique = (labels: Iterable<string>): string[] => [...new Set(labels)];
+
+const prioritize = (labels: Iterable<string>, priority: readonly string[]): string[] => {
+  const remaining = new Set(labels);
+  const result: string[] = [];
+  for (const label of priority) {
+    if (!remaining.delete(label)) continue;
+    result.push(label);
+  }
+  return [...result, ...orderedUnique(remaining)];
+};
 
 export function authoredUnitAssetLabel(team: CombatTeam, kind: UnitKind): string {
   return team === 'player' ? PLAYER_UNIT_ASSETS[kind] : ENEMY_UNIT_ASSETS[kind];
@@ -191,6 +240,101 @@ export function collectEntityAuthoredAssetLabels(state: Pick<GameState, 'units' 
   return orderedUnique(labels);
 }
 
+/**
+ * Assets that may be presented without violating fog-of-war disclosure.
+ * Player entities are always known; enemy entities enter only after the
+ * authoritative player-intel list discloses their stable id.
+ */
+export function collectPresentationAuthoredAssetLabels(
+  state: Pick<GameState, 'units' | 'buildings' | 'intel'>,
+): string[] {
+  const visibleEnemyIds = new Set(state.intel.player.visibleEnemyIds);
+  const labels: string[] = [];
+  for (const unit of state.units) {
+    if (unit.team === 'enemy' && !visibleEnemyIds.has(unit.id)) continue;
+    labels.push(authoredUnitAssetLabel(unit.team, unit.kind));
+  }
+  for (const building of state.buildings) {
+    if (building.team === 'enemy' && !visibleEnemyIds.has(building.id)) continue;
+    labels.push(authoredBuildingAssetLabel(building.team, building.kind));
+    for (const item of building.queue) labels.push(authoredUnitAssetLabel(building.team, item.unitKind));
+  }
+  return prioritize(labels, BREAKTHROUGH_OPENING_PRIORITY);
+}
+
+/** Asset families needed before the next scripted breakthrough transition. */
+export function collectBreakthroughMissionPrefetchLabels(
+  fixture: string,
+  state: Pick<GameState, 'mission'>,
+): string[] {
+  if (!isPlayableBreakthroughFixture(fixture)) return [];
+  const difficulty = getBreakthroughDifficulty(fixture);
+  const labels: string[] = [];
+  if (state.mission.phase === 'frontline' || state.mission.phase === 'counterattack') {
+    for (const kind of difficulty.counterattackWave) {
+      labels.push(authoredUnitAssetLabel('enemy', kind));
+    }
+    for (const kind of difficulty.reinforcementWave) {
+      labels.push(authoredUnitAssetLabel('player', kind));
+    }
+  }
+  if (
+    state.mission.phase === 'counterattack'
+    || state.mission.phase === 'reinforcement'
+    || state.mission.phase === 'command'
+  ) {
+    labels.push(...BREAKTHROUGH_ENEMY_BASE_ASSETS);
+    for (const kind of difficulty.finalAssaultWave) {
+      labels.push(authoredUnitAssetLabel('enemy', kind));
+    }
+  }
+  return orderedUnique(labels);
+}
+
+export function authoredBreakthroughStreamingPhasePlan(fixture: string): AuthoredAssetPhasePlan[] {
+  if (!isPlayableBreakthroughFixture(fixture)) return [];
+  return [
+    {
+      name: 'frontline',
+      labels: BREAKTHROUGH_FRONTLINE_ASSETS,
+      concurrency: 2,
+      deferred: true,
+    },
+    {
+      name: 'rear',
+      labels: BREAKTHROUGH_ENEMY_BASE_ASSETS,
+      concurrency: 2,
+      deferred: true,
+    },
+    {
+      name: 'dressing',
+      labels: AUTHORED_DRESSING_ASSETS,
+      concurrency: 1,
+      deferred: true,
+    },
+  ];
+}
+
+export function authoredBreakthroughRuntimePhasePlan(
+  fixture: string,
+  state: Pick<GameState, 'units' | 'buildings' | 'resources' | 'blockers' | 'intel' | 'mission' | 'tick'>,
+): AuthoredAssetPhasePlan[] {
+  if (!isPlayableBreakthroughFixture(fixture) || state.tick <= 0) return [];
+  return [
+    {
+      name: 'ensure',
+      labels: stableUnique([
+        ...collectPresentationAuthoredAssetLabels(state),
+        ...collectBreakthroughMissionPrefetchLabels(fixture, state),
+        ...collectLevelAuthoredAssetLabels(state),
+      ]),
+      concurrency: 2,
+      deferred: false,
+    },
+    ...authoredBreakthroughStreamingPhasePlan(fixture),
+  ];
+}
+
 export function collectLevelAuthoredAssetLabels(
   state: Pick<GameState, 'resources' | 'blockers'>,
 ): string[] {
@@ -202,7 +346,7 @@ export function collectLevelAuthoredAssetLabels(
 
 export function authoredAssetPhasePlan(
   fixture: string,
-  state: Pick<GameState, 'units' | 'buildings' | 'resources' | 'blockers'>,
+  state: Pick<GameState, 'units' | 'buildings' | 'resources' | 'blockers' | 'intel' | 'mission' | 'tick'>,
 ): AuthoredAssetPhasePlan[] {
   const reviewAllowlist = authoredAssetAllowlist(fixture);
   if (reviewAllowlist) {
@@ -216,11 +360,33 @@ export function authoredAssetPhasePlan(
 
   const entityLabels = collectEntityAuthoredAssetLabels(state);
   const levelLabels = collectLevelAuthoredAssetLabels(state);
+  if (isPlayableBreakthroughFixture(fixture)) {
+    const phases: AuthoredAssetPhasePlan[] = [
+      {
+        name: 'critical',
+        labels: prioritize([
+          ...collectPresentationAuthoredAssetLabels(state),
+          PLAYER_BUILDING_ASSETS.sentry,
+          PLAYER_BUILDING_ASSETS.cannon,
+          // The factory may queue either support vehicle immediately. Keeping
+          // these two compact no-texture GLBs in the opening phase prevents a
+          // user production request from sitting behind optional dressing.
+          PLAYER_UNIT_ASSETS.suppressor,
+          PLAYER_UNIT_ASSETS.artillery,
+          ...(state.tick > 0 ? collectBreakthroughMissionPrefetchLabels(fixture, state) : []),
+        ], BREAKTHROUGH_OPENING_PRIORITY),
+        concurrency: 4,
+        deferred: false,
+      },
+      { name: 'level', labels: levelLabels, concurrency: 3, deferred: false },
+    ];
+    return phases.filter((phase) => phase.labels.length > 0);
+  }
   if (fixture.startsWith('breakthrough-demo')) {
     const phases: AuthoredAssetPhasePlan[] = [
       {
         name: 'critical',
-        labels: orderedUnique([...entityLabels, ...BREAKTHROUGH_MISSION_ASSETS]),
+        labels: entityLabels,
         concurrency: 4,
         deferred: false,
       },
@@ -258,7 +424,9 @@ export class IncrementalAssetLoadLedger {
   queue(labels: Iterable<string>): string[] {
     if (this.disposed) return [];
     const accepted: string[] = [];
-    for (const label of orderedUnique(labels)) {
+    // Phase planners already provide deterministic priority. Preserve it so a
+    // small visible asset is not sorted behind multi-megabyte GLBs again.
+    for (const label of stableUnique(labels)) {
       if (this.queued.has(label) || this.inflight.has(label) || this.loaded.has(label) || this.failed.has(label)) continue;
       this.queued.add(label);
       accepted.push(label);
@@ -294,6 +462,19 @@ export class IncrementalAssetLoadLedger {
     if (this.disposed || !this.inflight.delete(label)) return false;
     this.failed.add(label);
     return true;
+  }
+
+  failedCount(labels: Iterable<string>): number {
+    let count = 0;
+    for (const label of new Set(labels)) {
+      if (this.failed.has(label)) count += 1;
+    }
+    return count;
+  }
+
+  queuedLabels(labels: Iterable<string>): string[] {
+    if (this.disposed) return [];
+    return stableUnique(labels).filter((label) => this.queued.has(label));
   }
 
   dispose(): void {
