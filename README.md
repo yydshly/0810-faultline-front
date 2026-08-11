@@ -1,10 +1,13 @@
 # 《断层战线》可玩原型 v0.6
 
 [![Quality Gate](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml/badge.svg)](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml)
+[![Deploy Pages](https://github.com/yydshly/0810-faultline-front/actions/workflows/pages.yml/badge.svg)](https://github.com/yydshly/0810-faultline-front/actions/workflows/pages.yml)
 
 《断层战线》是一款原创浏览器桌面即时战略原型。当前版本围绕“灰烬环线”单张 160×160 平面战场，验证经典基地建设 RTS 的选择、编队、采集、建设、生产、防御、战斗、情报、科技与胜负闭环。
 
 源码仓库：<https://github.com/yydshly/0810-faultline-front>
+
+在线体验：<https://yydshly.github.io/0810-faultline-front/>
 
 版本制品：[GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)
 
@@ -35,7 +38,8 @@ npm.cmd run build
 - [完整文档索引](docs/index.md)：按当前真值、设计规范、历史里程碑和资产记录整理全部文档。
 - [原创游戏设计方案](docs/faultline-front-game-design.zh-CN.md)：产品方向和长期愿景；其中部分架构建议尚未落地。
 - [黄金对局可玩性收口](docs/golden-match-playability.md)：当前默认对局和真实验收证据。
-- [本地发布就绪说明](docs/release-readiness.md)：最终 ZIP、SHA256、启动、验收和回滚。
+- [GitHub Pages 部署与线上验收](docs/github-pages-deployment.md)：公开地址、部署链、子路径处理、实机证据与回滚。
+- [发布与部署就绪说明](docs/release-readiness.md)：最终 ZIP、SHA256、线上部署、启动、验收和回滚。
 
 ## 默认黄金对局
 
@@ -182,7 +186,7 @@ npm.cmd run build
 - `src/ui.ts`：语义 HUD、桌面经典指挥侧栏、四类生产页签、部署/续战入口与焦点管理、防御状态、研究、取消、音频、小地图和响应式控制。
 - `src/main.ts`：输入映射、固定步长循环、情报过滤、音频、一次性续战导航、存档身份锁定、失败回退与模块组装。
 
-当前自动化结果为 32 个测试文件、315 项测试全部通过；TypeScript、42/42 GLB 资产契约（其中 17 件有纹理资产满足 KTX2 合同）、21 项验证器变异测试与 Vite 生产构建（35 modules）均已验证。完整范围见 [交付契约](docs/prototype-delivery-contract.md)、[覆盖清单](docs/prototype-coverage.md)、[三档难度、部署与续战入口](docs/breakthrough-difficulty-deployment.md)、[车辆专属残骸验收](docs/authored-vehicle-wreck-wave.md)、[核心建筑实体受损波次](docs/authored-building-damage-wave.md)、[核心建筑专属废墟波次](docs/authored-building-ruin-wave.md)、[敌军设施运行时四态验收](docs/enemy-infrastructure-runtime-review.md)、[玩家设施运行时四态验收](docs/player-infrastructure-runtime-review.md)、[玩家支援车辆金标](docs/player-support-vehicle-visual-gold.md)、[六车同屏运行时评审](docs/combat-vehicle-family-runtime-review.md)、[炮口运行时评审](docs/enemy-vehicle-socket-runtime-review.md)、[语义化销毁残迹](docs/semantic-destruction-residues.md)、[敌军重炮与中继站资产验收](docs/enemy-cannon-relay-visual-gold.md)、[桌面终局可玩性收口](docs/desktop-terminal-playability-closeout.md) 与 [桌面视觉金标契约](docs/visual-gold-contract.md)。
+当前自动化结果为 33 个测试文件、319 项测试全部通过；TypeScript、42/42 GLB 资产契约（其中 17 件有纹理资产满足 KTX2 合同）、21 项验证器变异测试与 Vite 生产构建（36 modules）均已验证。完整范围见 [交付契约](docs/prototype-delivery-contract.md)、[覆盖清单](docs/prototype-coverage.md)、[三档难度、部署与续战入口](docs/breakthrough-difficulty-deployment.md)、[车辆专属残骸验收](docs/authored-vehicle-wreck-wave.md)、[核心建筑实体受损波次](docs/authored-building-damage-wave.md)、[核心建筑专属废墟波次](docs/authored-building-ruin-wave.md)、[敌军设施运行时四态验收](docs/enemy-infrastructure-runtime-review.md)、[玩家设施运行时四态验收](docs/player-infrastructure-runtime-review.md)、[玩家支援车辆金标](docs/player-support-vehicle-visual-gold.md)、[六车同屏运行时评审](docs/combat-vehicle-family-runtime-review.md)、[炮口运行时评审](docs/enemy-vehicle-socket-runtime-review.md)、[语义化销毁残迹](docs/semantic-destruction-residues.md)、[敌军重炮与中继站资产验收](docs/enemy-cannon-relay-visual-gold.md)、[桌面终局可玩性收口](docs/desktop-terminal-playability-closeout.md) 与 [桌面视觉金标契约](docs/visual-gold-contract.md)。
 
 ## 英雄资产基准
 

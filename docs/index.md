@@ -1,6 +1,6 @@
 # 《断层战线》文档索引
 
-更新时间：2026-08-10
+更新时间：2026-08-11
 
 本目录同时保存当前产品真值、设计愿景和阶段性验收记录。阅读时应先确认文档类别，避免把旧里程碑中的数字或路线当成当前状态。
 
@@ -17,12 +17,13 @@
 2. **当前**：[技术实现、任务编排与 Blender 流水线](implementation-workflow-and-blender-pipeline.md) —— 剧情如何落到任务状态、核心工具分工，以及大模型怎样调度 Blender 制作正式资产。
 3. **当前**：[黄金对局可玩性收口](golden-match-playability.md) —— 当前 8–12 分钟桌面黄金路线与验收证据。
 4. **当前**：[三档难度、部署与续战入口](breakthrough-difficulty-deployment.md) —— 新兵/标准/老兵、根任务简报和继续上次战况。
-5. **当前**：[本地发布就绪说明](release-readiness.md) —— 最新 ZIP、SHA256、启动、验收和回滚。
-6. **当前**：[资产来源与生成记录](asset-provenance.md) —— 42 件原创资产的来源与流水线真值。
-7. **规范**：[原创即时战略游戏设计方案](faultline-front-game-design.zh-CN.md) —— 产品方向和长期愿景；React、Worker、IndexedDB 等内容不等同当前实现。
-8. **规范/历史**：[原型交付契约](prototype-delivery-contract.md) —— v0.1–v0.6 的范围修订与完成标准。
-9. **里程碑**：[原型覆盖清单](prototype-coverage.md) —— 早期逐阶段覆盖记录，测试数和资产数已被当前文档替代。
-10. **当前**：[原型交接](prototype-handoff.md) —— 当前交付边界、关键入口和接续建议。
+5. **当前**：[GitHub Pages 部署与线上验收](github-pages-deployment.md) —— 公开地址、部署提交、子路径契约、实机证据和回滚。
+6. **当前**：[发布与部署就绪说明](release-readiness.md) —— 最新 ZIP、SHA256、线上部署、启动、验收和回滚。
+7. **当前**：[资产来源与生成记录](asset-provenance.md) —— 42 件原创资产的来源与流水线真值。
+8. **规范**：[原创即时战略游戏设计方案](faultline-front-game-design.zh-CN.md) —— 产品方向和长期愿景；React、Worker、IndexedDB 等内容不等同当前实现。
+9. **规范/历史**：[原型交付契约](prototype-delivery-contract.md) —— v0.1–v0.6 的范围修订与完成标准。
+10. **里程碑**：[原型覆盖清单](prototype-coverage.md) —— 早期逐阶段覆盖记录，测试数和资产数已被当前文档替代。
+11. **当前**：[原型交接](prototype-handoff.md) —— 当前交付边界、关键入口和接续建议。
 
 ## 关卡、任务与可玩性
 
@@ -91,7 +92,7 @@
 
 当多份文档出现不同测试数、资产数、对局时长或包信息时，依次采用：
 
-1. [本地发布就绪说明](release-readiness.md)
+1. [发布与部署就绪说明](release-readiness.md)
 2. [项目复盘与技术总览](project-retrospective-and-architecture.md)
 3. [黄金对局可玩性收口](golden-match-playability.md)
 4. [三档难度、部署与续战入口](breakthrough-difficulty-deployment.md)

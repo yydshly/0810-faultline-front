@@ -44,14 +44,14 @@ npm.cmd run dev
 ## 4. 当前质量门
 
 - TypeScript 严格检查：通过。
-- Vitest：32 个测试文件、315 项测试通过。
+- Vitest：33 个测试文件、319 项测试通过。
 - GLB：42/42 件资产合同通过；其中 17 件有纹理资产满足 KTX2 合同，25 件为无贴图 PBR。
-- Vite：35 modules 生产构建通过。
+- Vite：36 modules 生产构建通过。
 - 已知非阻塞提示：Three.js 主分块 549.65 kB，超过 500 kB 提示线。
 - 当前发布包：`release/faultline-front-prototype-v0.6.0-20260811T064551Z.zip`。
 - 发布包 SHA256：`9bd38f523ddaf2d5e2ea3569a2856b1c9e4679c9415427d3b0eea6770d5bb1b5`。
 
-完整包信息见[本地发布就绪说明](release-readiness.md)。
+完整包信息见[发布与部署就绪说明](release-readiness.md)。
 
 ## 5. 技术边界
 
@@ -59,7 +59,7 @@ npm.cmd run dev
 - 当前模拟在主线程以 20Hz 固定步进运行，不在 Web Worker。
 - 当前存档是 `localStorage` 单槽命令日志，不是 IndexedDB 多槽快照。
 - 当前战场直接渲染 GLB；方向帧管线曾完成验证，但没有替换正式运行时。
-- 当前无后端、账号、联机或公网部署。
+- 当前已有 GitHub Pages 静态公网演示，但无后端、账号或联机服务。
 - 源码现已纳入 [GitHub 仓库](https://github.com/yydshly/0810-faultline-front)并建立版本标签；2026-08-09 的既有发布 ZIP 早于仓库初始化，所以其 manifest 提交身份仍为空，不能冒充提交绑定制品。
 
 这些差异已在[项目复盘与技术总览](project-retrospective-and-architecture.md)中记录，避免把早期设计愿景误报为已实现功能。
