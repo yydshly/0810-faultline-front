@@ -53,6 +53,7 @@ import {
   type PresentationLodTier,
   type RenderablePresentationLodTier,
 } from './presentation-lod';
+import { resolvePublicAssetUrl } from './public-asset-url';
 import type { VisibilitySnapshot } from './visibility';
 import type {
   BeaconState,
@@ -5318,9 +5319,11 @@ export class BattlefieldScene {
       return;
     }
     if (this.disposed) return;
+    const publicAssetUrl = (path: string): string =>
+      resolvePublicAssetUrl(import.meta.env.BASE_URL, path);
     const loader = new GLTFLoader();
     this.ktx2Loader = new KTX2Loader()
-      .setTranscoderPath('/assets/basis/')
+      .setTranscoderPath(publicAssetUrl('/assets/basis/'))
       .detectSupport(this.renderer);
     loader.setKTX2Loader(this.ktx2Loader);
     const load = (
@@ -5351,7 +5354,7 @@ export class BattlefieldScene {
               return;
             }
             try {
-              loader.load(url, (gltf) => {
+              loader.load(publicAssetUrl(url), (gltf) => {
                 let commitStarted = false;
                 try {
                   if (this.disposed) {
