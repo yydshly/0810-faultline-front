@@ -1,0 +1,60 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  TZ: UTC
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: TypeScript, tests, build, and assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.15.0'
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: Run deterministic tests
+        run: npm test -- --maxWorkers=1
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Validate all runtime GLB contracts
+        run: npm run assets:validate:ktx2
+
+      - name: Test GLB contract mutations
+        run: python tools/test_validate_glb_contracts.py

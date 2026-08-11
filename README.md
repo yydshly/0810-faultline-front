@@ -1,8 +1,12 @@
 # 《断层战线》可玩原型 v0.6
 
+[![Quality Gate](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml/badge.svg)](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml)
+
 《断层战线》是一款原创浏览器桌面即时战略原型。当前版本围绕“灰烬环线”单张 160×160 平面战场，验证经典基地建设 RTS 的选择、编队、采集、建设、生产、防御、战斗、情报、科技与胜负闭环。
 
 源码仓库：<https://github.com/yydshly/0810-faultline-front>
+
+版本制品：[GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)
 
 v0.6 以《红色警戒 2 / 尤里的复仇》的经典操作语法为参考，形成“左侧战场、右侧固定指挥栏”的桌面构图：雷达、资源、工具和四类生产队列沿右栏连续阅读；地图地表、道路、基地铺装、矿区、地标、建筑和载具则全部使用原创程序化资产重新塑形。
 
