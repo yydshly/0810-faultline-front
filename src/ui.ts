@@ -70,7 +70,8 @@ export interface HUDCallbacks {
   onOverlayPauseChange?(paused: boolean): void;
   onSelectEntity(id: string): void;
   onMinimapNavigate(point: MinimapNavigationPoint): void;
-  onDeployDifficulty?(difficulty: BreakthroughDifficultyId): void;
+  /** Returns true when the current tick-zero battlefield can start in place. */
+  onDeployDifficulty?(difficulty: BreakthroughDifficultyId, mode: 'initial' | 'change'): boolean;
   onResumeSavedDeployment?(): void;
 }
 
@@ -1356,7 +1357,13 @@ export class GameHUD {
       }, { signal });
     }
     this.deploymentStartButton.addEventListener('click', () => {
-      this.callbacks.onDeployDifficulty?.(this.deploymentSelectedDifficulty);
+      const startedInPlace = this.callbacks.onDeployDifficulty?.(
+        this.deploymentSelectedDifficulty,
+        this.deploymentMode,
+      ) === true;
+      if (!startedInPlace) return;
+      this.closeDeploymentBriefing(false);
+      window.requestAnimationFrame(() => this.leftToggle.focus());
     }, { signal });
     this.deploymentResumeButton.addEventListener('click', () => {
       this.callbacks.onResumeSavedDeployment?.();

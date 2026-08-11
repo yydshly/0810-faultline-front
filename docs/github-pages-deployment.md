@@ -18,7 +18,7 @@
 
 ```text
 Pull Request
-  → Quality Gate（TypeScript / 319 tests / build / 42 GLB contracts）
+  → Quality Gate（TypeScript / 331 tests / build / 42 GLB contracts）
   → 合并 main
   → main Quality Gate 成功
   → Deploy Pages workflow_run

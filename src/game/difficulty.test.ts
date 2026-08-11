@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BREAKTHROUGH_DIFFICULTIES,
   breakthroughFixtureForDifficulty,
+  canStartBreakthroughDeploymentInPlace,
   getBreakthroughDifficulty,
   isPlayableBreakthroughFixture,
   resolveBreakthroughDifficultyId,
@@ -67,5 +68,39 @@ describe('breakthrough difficulty contract', () => {
     ['default', false],
   ] as const)('classifies playable fixture %s', (fixture, expected) => {
     expect(isPlayableBreakthroughFixture(fixture)).toBe(expected);
+  });
+
+  it('starts an unchanged tick-zero deployment without rebuilding the scene', () => {
+    expect(canStartBreakthroughDeploymentInPlace(
+      'breakthrough-demo',
+      'breakthrough-demo',
+      0,
+      'active',
+      'initial',
+    )).toBe(true);
+    expect(canStartBreakthroughDeploymentInPlace(
+      'breakthrough-demo-cadet-reduced',
+      'breakthrough-demo-cadet-reduced',
+      0,
+      'active',
+      'initial',
+    )).toBe(true);
+  });
+
+  it.each([
+    ['breakthrough-demo', 'breakthrough-demo-veteran', 0, 'active', 'initial'],
+    ['breakthrough-demo', 'breakthrough-demo', 1, 'active', 'initial'],
+    ['breakthrough-demo', 'breakthrough-demo', 0, 'victory', 'initial'],
+    ['breakthrough-demo', 'breakthrough-demo', 0, 'active', 'change'],
+    ['breakthrough-demo-victory-review', 'breakthrough-demo-victory-review', 0, 'active', 'initial'],
+    ['default', 'default', 0, 'active', 'initial'],
+  ] as const)('requires canonical navigation for %s to %s at tick %s/%s', (
+    currentFixture,
+    targetFixture,
+    tick,
+    status,
+    mode,
+  ) => {
+    expect(canStartBreakthroughDeploymentInPlace(currentFixture, targetFixture, tick, status, mode)).toBe(false);
   });
 });

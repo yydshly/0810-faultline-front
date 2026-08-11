@@ -47,6 +47,7 @@
 
 ## 运行时、加载与性能
 
+- **当前**：[冷启动资产优先级与分阶段流送](cold-start-asset-streaming.md)
 - **当前**：[运行时材质与 LOD 验证](runtime-material-lod-validation.md)
 - **里程碑**：[突破战实例化验证](breakthrough-instancing-validation.md)
 - **当前**：[突破战桌面性能收口](breakthrough-desktop-performance-closeout.md)
