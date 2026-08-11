@@ -102,10 +102,11 @@ function Get-GitSourceMetadata {
     }
 
     $branch = @(& git -C $Root branch --show-current 2>$null)
-    $status = @(& git -C $Root status --porcelain --untracked-files=no 2>$null)
-    $tag = @(& git -C $Root describe --tags --exact-match HEAD 2>$null)
+    $localExclude = (Join-Path $Root '.git\info\exclude').Replace('\', '/')
+    $status = @(& git -c "core.excludesFile=$localExclude" -C $Root status --porcelain --untracked-files=no 2>$null)
+    $tag = @(& git -C $Root tag --points-at HEAD 2>$null)
     $isDirty = $status.Count -gt 0
-    $exactTag = if ($LASTEXITCODE -eq 0 -and $tag.Count -gt 0) { $tag[0].Trim() } else { $null }
+    $exactTag = if ($tag.Count -gt 0) { $tag[0].Trim() } else { $null }
     $identity = if ($isDirty) {
         'git-dirty-verified-dist'
     }
