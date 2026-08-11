@@ -97,15 +97,22 @@ The activation band is 36 CSS pixels instead of the previous 14-pixel binary
 strip, and movement ramps progressively to a 42 world-unit/second maximum as
 the pointer approaches the visible battlefield edge. Pointer tracking continues
 at window level when the cursor crosses from the canvas into non-interactive
-shell space, while buttons, dialogs, command docks, the minimap, and both rails
-explicitly suppress edge-pan. This keeps the right command rail usable without
-making the actual battlefield edge feel unresponsive.
+shell space. A separate 12-pixel viewport-edge fallback keeps all four physical
+screen edges active, including the far side of the fixed command rail. Only
+actual buttons, links, form controls, dialogs, and the interactive minimap
+suppress edge-pan; empty topbar, dock, and rail surfaces no longer disable it.
+
+Edge, arrow-key, and middle-drag input is converted from screen space through
+the fixed 45-degree camera yaw before changing the world target. Up, down, left,
+and right therefore remain visually aligned with the corresponding screen edge
+instead of drifting along raw world X/Z axes.
 
 Regression coverage locks the progressive response and the 1280 x 720 layout
 where the visible battlefield ends at x=964 and the remaining 316 pixels belong
-to the command rail. Building acquisition has a larger screen-space fallback
-while still excluding hidden, resource, destroyed, destruction-in-progress,
-and authored-ruin roots.
+to the command rail. The rail interior remains quiet, while its outermost edge
+still pans right unless the pointer is on a real control. Building acquisition
+has a larger screen-space fallback while still excluding hidden, resource,
+destroyed, destruction-in-progress, and authored-ruin roots.
 
 The existing minimap is also an explicit camera navigation surface: desktop
 left-click and drag reposition camera focus, while Enter or Space activates the

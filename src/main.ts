@@ -1,7 +1,11 @@
 import './styles.css';
 import { BUILDING_DEFS, GAME_TICK_SECONDS, UNIT_DEFS } from './game/config';
 import { GameAudio } from './game/audio';
-import { visibleStageEdgePanDirection } from './game/camera-edge';
+import {
+  EDGE_PAN_BLOCKING_SELECTOR,
+  screenPanToWorldPan,
+  visibleStageEdgePanDirection,
+} from './game/camera-edge';
 import {
   breakthroughFixtureForDifficulty,
   canStartBreakthroughDeploymentInPlace,
@@ -55,21 +59,7 @@ const AUDIO_MUTED_KEY = 'faultline-front.audio-muted.v1';
 const RENDER_QUALITY_KEY = 'faultline-front.render-quality.v1';
 const KEYBOARD_PAN_SPEED = 25;
 const EDGE_PAN_MAX_SPEED = 42;
-const EDGE_PAN_BLOCKING_SELECTOR = [
-  'button',
-  'a',
-  'input',
-  'select',
-  'textarea',
-  '[role="button"]',
-  '[role="dialog"]',
-  '.ff-topbar',
-  '.ff-left-rail',
-  '.ff-right-rail',
-  '.ff-command-dock',
-  '.ff-minimap-panel',
-  '.ff-drawer-toggle',
-].join(',');
+const MIDDLE_DRAG_PAN_SPEED = 0.064;
 
 interface SavedDeploymentSlot {
   serialized: string;
@@ -408,7 +398,11 @@ class FaultlineApp {
     if (this.middleDrag && this.scene) {
       const dx = event.clientX - this.middleDrag.x;
       const dy = event.clientY - this.middleDrag.y;
-      this.scene.pan((-dx + dy) * 0.045, (-dx - dy) * 0.045);
+      const worldPan = screenPanToWorldPan(
+        -dx * MIDDLE_DRAG_PAN_SPEED,
+        -dy * MIDDLE_DRAG_PAN_SPEED,
+      );
+      this.scene.pan(worldPan.x, worldPan.z);
       this.middleDrag = { x: event.clientX, y: event.clientY };
       return;
     }
@@ -577,7 +571,10 @@ class FaultlineApp {
       dx += direction.x * edgeSpeed;
       dz += direction.z * edgeSpeed;
     }
-    if (dx !== 0 || dz !== 0) this.scene.pan(dx, dz);
+    if (dx !== 0 || dz !== 0) {
+      const worldPan = screenPanToWorldPan(dx, dz);
+      this.scene.pan(worldPan.x, worldPan.z);
+    }
   }
 
   private beginBuild(kind: BuildingKind): void {
