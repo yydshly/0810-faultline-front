@@ -1,8 +1,8 @@
 # 《断层战线》项目复盘与技术总览
 
-更新时间：2026-08-10  
+更新时间：2026-08-11
 当前版本：v0.6.0  
-交付形态：桌面 Web 可玩垂直切片、本地可验证发布包
+交付形态：桌面 Web 可玩垂直切片、本地可验证发布包、GitHub Pages 公网演示
 
 ## 1. 执行结论
 
@@ -14,7 +14,7 @@
 - 本地保存、载入和从根任务简报继续上次战况；存档按场景、种子和模拟刻严格校验。
 - 42 件原创 Blender/GLB 运行时资产、语义挂点、实体受损、施工、出厂、卸矿、残骸和废墟表现。
 - 参考经典 C&C/RA2 信息架构的桌面右侧指挥栏，同时保持原创视觉与版权边界。
-- 32 个测试文件、315 项自动化测试、42/42 GLB 资产合同（其中 17 件有纹理资产满足 KTX2 合同）、生产构建和本地发布包。
+- 33 个测试文件、319 项自动化测试、42/42 GLB 资产合同（其中 17 件有纹理资产满足 KTX2 合同）、生产构建、本地发布包和 GitHub Pages 自动部署。
 
 因此，**“完成一个可以开始、理解、操作、保存并打到结算的桌面 RTS 垂直切片”这一阶段目标已经达成**。
 
@@ -207,7 +207,7 @@ flowchart LR
 | IndexedDB 与 3 个自动存档 | `localStorage` 单槽命令日志，从 tick 0 重放；长恢复每 300 tick 让出一帧 | 多槽和自动存档是下一阶段 P1 |
 | 2.5D 车体/炮塔方向图集运行时 | 方向帧管线曾完成验证，但正式战场仍直接渲染 GLB | 不应误报为已切换精灵运行时 |
 | 联机锁步与服务器权威 | 当前完全本地单人，无后端、账号或联网 | 只有单人 Alpha 稳定后才评估 |
-| 公网正式发布 | 当前只生成经过校验的本地静态 ZIP | 需要明确授权、Git 版本和线上烟测后实施 |
+| 公网静态演示 | GitHub Pages 只部署通过 Quality Gate 的精确 `main` 提交 | 已完成子路径资源修复、线上资产/简报/保存续战烟测；正式商业托管、自定义域与 SLA 尚未实施 |
 
 ### 6.6 资产生产与运行时加载
 
@@ -238,17 +238,17 @@ flowchart LR
 
 ## 7. 当前规模与质量证据
 
-截至 2026-08-10：
+截至 2026-08-11：
 
-- 23 个非测试 TypeScript 文件（其中 1 个为 Vite 类型声明）、32 个测试文件，共 55 个 TypeScript 文件。
-- 以 PowerShell `Measure-Object -Line` 的非空行口径计，非测试 TypeScript 约 18,352 行、测试约 4,632 行、CSS 约 4,397 行。
+- 24 个非测试 TypeScript 文件（其中 1 个为 Vite 类型声明）、33 个测试文件，共 57 个 TypeScript 文件。
+- 以 PowerShell `Measure-Object -Line` 的非空行口径计，非测试 TypeScript 约 18,361 行、测试约 4,652 行、CSS 约 4,397 行。
 - 42 件运行时 GLB，其中 17 件含 KTX2 纹理、25 件使用无贴图 PBR 材质。
-- 32 个测试文件、315 项测试全部通过。
-- TypeScript 严格检查通过；Vite 生产构建 35 modules。
+- 33 个测试文件、319 项测试全部通过。
+- TypeScript 严格检查通过；Vite 生产构建 36 modules。
 - Three.js 主分块 549.65 kB，是当前唯一非阻塞构建提示。
 - 最终提交绑定包为 `faultline-front-prototype-v0.6.0-20260811T064551Z.zip`，SHA256 为 `9bd38f523ddaf2d5e2ea3569a2856b1c9e4679c9415427d3b0eea6770d5bb1b5`；manifest 锁定提交 `33a9122b72a13d1a3f4b1a571509f261f2ae656d` 与标签 `v0.6.0`。
 
-最新可玩性证据见[黄金对局收口](golden-match-playability.md)，最终包和回滚说明见[发布就绪说明](release-readiness.md)。
+最新可玩性证据见[黄金对局收口](golden-match-playability.md)，公开版本见 [GitHub Pages 部署与线上验收](github-pages-deployment.md)，最终包和回滚说明见[发布与部署就绪说明](release-readiness.md)。
 
 ## 8. 仍可优化的部分
 
@@ -329,4 +329,4 @@ flowchart LR
 - [黄金对局可玩性收口](golden-match-playability.md)
 - [三档难度、部署与续战入口](breakthrough-difficulty-deployment.md)
 - [资产来源与生成记录](asset-provenance.md)
-- [本地发布就绪说明](release-readiness.md)
+- [发布与部署就绪说明](release-readiness.md)
