@@ -11,6 +11,8 @@
 
 版本制品：[GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)
 
+技术路线决策：[Web 平台边界与 Godot 4 / Unity 引擎选择](docs/platform-boundaries-and-engine-selection.md)
+
 v0.6 以《红色警戒 2 / 尤里的复仇》的经典操作语法为参考，形成“左侧战场、右侧固定指挥栏”的桌面构图：雷达、资源、工具和四类生产队列沿右栏连续阅读；地图地表、道路、基地铺装、矿区、地标、建筑和载具则全部使用原创程序化资产重新塑形。
 
 ## 运行
@@ -34,6 +36,7 @@ npm.cmd run build
 ## 文档导航
 
 - [项目复盘与技术总览](docs/project-retrospective-and-architecture.md)：从立项到当前目标的动作、问题、解决方案、实际技术架构与后续优化。
+- [Web 平台边界与引擎选择](docs/platform-boundaries-and-engine-selection.md)：当前 Web 版适合什么、限制在哪里，以及 Godot 4、Unity、Electron 和 Unreal 的选择边界。
 - [技术实现、任务编排与 Blender 流水线](docs/implementation-workflow-and-blender-pipeline.md)：剧情如何变成确定性任务，大模型如何调度 Blender 生产、验证和发布游戏资产。
 - [完整文档索引](docs/index.md)：按当前真值、设计规范、历史里程碑和资产记录整理全部文档。
 - [原创游戏设计方案](docs/faultline-front-game-design.zh-CN.md)：产品方向和长期愿景；其中部分架构建议尚未落地。

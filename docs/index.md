@@ -14,16 +14,17 @@
 ## 从这里开始
 
 1. **当前**：[项目复盘与技术总览](project-retrospective-and-architecture.md) —— 从立项到当前目标的动作、问题、解决方案、架构和后续优化。
-2. **当前**：[技术实现、任务编排与 Blender 流水线](implementation-workflow-and-blender-pipeline.md) —— 剧情如何落到任务状态、核心工具分工，以及大模型怎样调度 Blender 制作正式资产。
-3. **当前**：[黄金对局可玩性收口](golden-match-playability.md) —— 当前 8–12 分钟桌面黄金路线与验收证据。
-4. **当前**：[三档难度、部署与续战入口](breakthrough-difficulty-deployment.md) —— 新兵/标准/老兵、根任务简报和继续上次战况。
-5. **当前**：[GitHub Pages 部署与线上验收](github-pages-deployment.md) —— 公开地址、部署提交、子路径契约、实机证据和回滚。
-6. **当前**：[发布与部署就绪说明](release-readiness.md) —— 最新 ZIP、SHA256、线上部署、启动、验收和回滚。
-7. **当前**：[资产来源与生成记录](asset-provenance.md) —— 42 件原创资产的来源与流水线真值。
-8. **规范**：[原创即时战略游戏设计方案](faultline-front-game-design.zh-CN.md) —— 产品方向和长期愿景；React、Worker、IndexedDB 等内容不等同当前实现。
-9. **规范/历史**：[原型交付契约](prototype-delivery-contract.md) —— v0.1–v0.6 的范围修订与完成标准。
-10. **里程碑**：[原型覆盖清单](prototype-coverage.md) —— 早期逐阶段覆盖记录，测试数和资产数已被当前文档替代。
-11. **当前**：[原型交接](prototype-handoff.md) —— 当前交付边界、关键入口和接续建议。
+2. **当前/决策**：[Web 平台边界与引擎选择](platform-boundaries-and-engine-selection.md) —— Web 技术切片的真实边界、Godot 4 与 Unity 的区别，以及完整游戏的引擎决策门槛。
+3. **当前**：[技术实现、任务编排与 Blender 流水线](implementation-workflow-and-blender-pipeline.md) —— 剧情如何落到任务状态、核心工具分工，以及大模型怎样调度 Blender 制作正式资产。
+4. **当前**：[黄金对局可玩性收口](golden-match-playability.md) —— 当前 8–12 分钟桌面黄金路线与验收证据。
+5. **当前**：[三档难度、部署与续战入口](breakthrough-difficulty-deployment.md) —— 新兵/标准/老兵、根任务简报和继续上次战况。
+6. **当前**：[GitHub Pages 部署与线上验收](github-pages-deployment.md) —— 公开地址、部署提交、子路径契约、实机证据和回滚。
+7. **当前**：[发布与部署就绪说明](release-readiness.md) —— 最新 ZIP、SHA256、线上部署、启动、验收和回滚。
+8. **当前**：[资产来源与生成记录](asset-provenance.md) —— 42 件原创资产的来源与流水线真值。
+9. **规范**：[原创即时战略游戏设计方案](faultline-front-game-design.zh-CN.md) —— 产品方向和长期愿景；React、Worker、IndexedDB 等内容不等同当前实现。
+10. **规范/历史**：[原型交付契约](prototype-delivery-contract.md) —— v0.1–v0.6 的范围修订与完成标准。
+11. **里程碑**：[原型覆盖清单](prototype-coverage.md) —— 早期逐阶段覆盖记录，测试数和资产数已被当前文档替代。
+12. **当前**：[原型交接](prototype-handoff.md) —— 当前交付边界、关键入口和接续建议。
 
 ## 关卡、任务与可玩性
 
