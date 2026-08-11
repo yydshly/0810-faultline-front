@@ -1,0 +1,155 @@
+{
+  "assetId": "ff_mbt_01",
+  "sourceBlend": "assets/3d/ff_mbt_01/ff_mbt_01_v1.blend",
+  "sourceGlb": "assets/3d/ff_mbt_01/ff_mbt_01_v1.glb",
+  "bodyDirections": [
+    {
+      "index": 0,
+      "degrees": 0,
+      "file": "body_00.png"
+    },
+    {
+      "index": 1,
+      "degrees": 45,
+      "file": "body_01.png"
+    },
+    {
+      "index": 2,
+      "degrees": 90,
+      "file": "body_02.png"
+    },
+    {
+      "index": 3,
+      "degrees": 135,
+      "file": "body_03.png"
+    },
+    {
+      "index": 4,
+      "degrees": 180,
+      "file": "body_04.png"
+    },
+    {
+      "index": 5,
+      "degrees": 225,
+      "file": "body_05.png"
+    },
+    {
+      "index": 6,
+      "degrees": 270,
+      "file": "body_06.png"
+    },
+    {
+      "index": 7,
+      "degrees": 315,
+      "file": "body_07.png"
+    }
+  ],
+  "turretDirections": [
+    {
+      "index": 0,
+      "degrees": 0.0,
+      "file": "turret_00.png"
+    },
+    {
+      "index": 1,
+      "degrees": 22.5,
+      "file": "turret_01.png"
+    },
+    {
+      "index": 2,
+      "degrees": 45.0,
+      "file": "turret_02.png"
+    },
+    {
+      "index": 3,
+      "degrees": 67.5,
+      "file": "turret_03.png"
+    },
+    {
+      "index": 4,
+      "degrees": 90.0,
+      "file": "turret_04.png"
+    },
+    {
+      "index": 5,
+      "degrees": 112.5,
+      "file": "turret_05.png"
+    },
+    {
+      "index": 6,
+      "degrees": 135.0,
+      "file": "turret_06.png"
+    },
+    {
+      "index": 7,
+      "degrees": 157.5,
+      "file": "turret_07.png"
+    },
+    {
+      "index": 8,
+      "degrees": 180.0,
+      "file": "turret_08.png"
+    },
+    {
+      "index": 9,
+      "degrees": 202.5,
+      "file": "turret_09.png"
+    },
+    {
+      "index": 10,
+      "degrees": 225.0,
+      "file": "turret_10.png"
+    },
+    {
+      "index": 11,
+      "degrees": 247.5,
+      "file": "turret_11.png"
+    },
+    {
+      "index": 12,
+      "degrees": 270.0,
+      "file": "turret_12.png"
+    },
+    {
+      "index": 13,
+      "degrees": 292.5,
+      "file": "turret_13.png"
+    },
+    {
+      "index": 14,
+      "degrees": 315.0,
+      "file": "turret_14.png"
+    },
+    {
+      "index": 15,
+      "degrees": 337.5,
+      "file": "turret_15.png"
+    }
+  ],
+  "shadow": "shadow.png",
+  "frameSize": {
+    "width": 192,
+    "height": 192
+  },
+  "camera": {
+    "projection": "orthographic",
+    "azimuthDegrees": 45,
+    "elevationDegrees": 55
+  },
+  "nodes": {
+    "chassis": "chassis_root",
+    "turret": "turret_yaw",
+    "barrel": "barrel_pitch",
+    "muzzle": "muzzle_socket",
+    "selection": "selection_anchor"
+  },
+  "runtimeStatus": "hero-baseline-v3",
+  "textureStatus": "deterministic-hero-pbr-v3",
+  "assetRevision": "hero-baseline-v3",
+  "damageSockets": [
+    "damage_socket_engine",
+    "damage_socket_turret",
+    "wreck_anchor"
+  ],
+  "spriteRenderStatus": "preserved-previous-baseline"
+}

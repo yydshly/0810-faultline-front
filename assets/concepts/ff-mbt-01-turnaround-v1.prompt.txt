@@ -1,0 +1,14 @@
+Use case: stylized-concept
+Asset type: original RTS production model turnaround reference sheet for Faultline Front
+
+Use the project benchmark only as a reference for graphite industrial materials, restrained amber armor markings, cyan signal lights, and grounded military scale. Do not copy an existing vehicle.
+
+Create one original medium battle tank with a broad low tracked chassis, clearly separate rotating turret, single heavy cannon, readable front glacis, six road wheels per side, rear engine deck, commander hatch, antenna socket, exhausts, tow points, and modular side armor. Show the exact same design consistently in four views: three-quarter isometric, strict front orthographic, strict left orthographic, and strict rear orthographic.
+
+Use a neutral warm-gray studio background and even lighting. Keep geometry, wheel count, cannon length, hatches, armor panels, and markings identical across every view. The silhouette must remain readable at small RTS scale. Materials are matte gunmetal steel, dark rubber tracks, restrained amber structural plates, and small cyan electronics.
+
+Avoid people, environment, terrain, explosions, UI, logos, brand marks, readable text, watermark, and resemblance to a specific copyrighted game vehicle.
+
+Generation path: built-in image generation.
+Reference role: assets/concepts/faultline-front-visual-benchmark-v1.png is palette/material guidance only.
+Runtime role: reference-only; this image is not a gameplay sprite or extracted 3D geometry.

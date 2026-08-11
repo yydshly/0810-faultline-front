@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: game environment concept art and visual-style benchmark for an original desktop real-time strategy game
+Primary request: create one cohesive, original near-future RTS battlefield scene that demonstrates a unified model language for buildings, vehicles, infantry, terrain, and effects
+Scene/backdrop: a temperate industrial frontier on one completely flat playable ground plane, with a paved service road, sparse grass, compact crystal resource field, and a few non-walkable rock formations only at the outer background
+Subject: one compact faction base containing a command hub, refinery, power generator, barracks, vehicle factory, and low defensive turret; nearby show a scout vehicle, main battle tank, artillery vehicle, and two small infantry squads. Every asset must share the same modular chamfered armor panels, repeated hex-bolt details, consistent vents, and practical construction logic
+Style/medium: polished stylized 3D game render, readable chunky silhouettes, semi-realistic PBR materials, production concept quality, original design, not photorealistic
+Composition/framing: wide 16:9-feeling establishing shot from a 55-degree three-quarter top-down gameplay camera; all important silhouettes separated and readable at RTS camera distance; no close-up hero object; no interface
+Lighting/mood: clear late-afternoon neutral light with soft shadows; restrained atmosphere; functional cyan emissive status lights only where a visible emitter exists
+Color palette: 70% graphite and weathered steel, 20% warm amber faction markings, 10% cyan functional emissive accents; muted olive and gray terrain
+Materials/textures: consistent medium-scale panel seams, subtle edge wear, no random material noise, no glossy toy plastic
+Constraints: exactly one walkable elevation; consistent object scale; clear building footprints; no stairs, ramps, bridges, cliffs used for traversal; no text, no logos, no watermark; no copied or recognizable units, buildings, symbols, or interface from Command & Conquer or Red Alert; avoid excessive explosions, crowded composition, fantasy elements, and inconsistent art styles
+
+Generation mode: built-in image generation tool.
