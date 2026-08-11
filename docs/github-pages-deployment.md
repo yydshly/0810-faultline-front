@@ -7,12 +7,12 @@
 
 - 游戏地址：<https://yydshly.github.io/0810-faultline-front/>
 - 源码仓库：<https://github.com/yydshly/0810-faultline-front>
-- 部署提交：`5a5d2661a882d7f3e9c6df831b0a48d4681cf95e`
-- 部署 PR：[PR #2](https://github.com/yydshly/0810-faultline-front/pull/2)
-- `main` 质量门：[Quality Gate #31468822231](https://github.com/yydshly/0810-faultline-front/actions/runs/31468822231)
-- Pages 构建与部署：[Deploy Pages #31468932033](https://github.com/yydshly/0810-faultline-front/actions/runs/31468932033)
+- 当前运行时代码提交：`d2119344123b07d44d1ad7f4319fd3dd9dc7cb22`
+- 冷启动优化 PR：[PR #4](https://github.com/yydshly/0810-faultline-front/pull/4)
+- `main` 质量门：[Quality Gate #31475947368](https://github.com/yydshly/0810-faultline-front/actions/runs/31475947368)
+- Pages 构建与部署：[Deploy Pages #31476060541](https://github.com/yydshly/0810-faultline-front/actions/runs/31476060541)
 
-`v0.6.0` 标签仍固定在版本 ZIP 对应的提交 `33a9122b72a13d1a3f4b1a571509f261f2ae656d`，没有为了部署移动标签。Pages 提交只增加子路径资源解析、自动部署与对应测试；可下载版本制品继续以 GitHub Release 中的 ZIP、manifest 和 SHA256 为准。
+`v0.6.0` 标签仍固定在版本 ZIP 对应的提交 `33a9122b72a13d1a3f4b1a571509f261f2ae656d`，没有为了部署移动标签。Pages 跟随通过质量门的 `main`，当前线上运行时已包含子路径部署和突破战冷启动流送优化；本页后续纯文档提交会重跑同一构建链，但不改变运行时代码。可下载的 v0.6.0 版本制品仍以 GitHub Release 中的 ZIP、manifest 和 SHA256 为准。
 
 ## 部署链
 
@@ -52,17 +52,19 @@ npm run preview -- --port 4181 --base "/0810-faultline-front/"
 
 ## 2026-08-11 公网实机证据
 
-验收环境为 1440×900 桌面视口、`quality=high`、公开 GitHub Pages 地址。
+最新验收环境为 1280×720 桌面视口、DPR 1.5、`quality=high`、公开 GitHub Pages 地址。以下时间均为单次实测，不是 p50/p90，也不是 FPS。
 
 | 检查 | 结果 |
 |---|---|
 | 根简报 | 00:00 显示三档突破战简报，标准难度默认选中，模拟保持战术暂停 |
-| 冷启动资产 | requested/loaded/completed = 40/40/40；failed = 0；retries = 0；queued/inflight = 0 |
-| 分阶段加载 | critical / level / dressing 共 3/3 阶段完成；首件正式模型 5.762 秒 |
-| 材质 | conflict = 0；cross-owner reuse = 0；40 个正式资产 owner |
-| 路径 | 40 个 GLB 与 Basis JS/WASM 均来自 `/0810-faultline-front/assets/`；裸 `/assets/` 请求为 0 |
+| 00:00 资产 | requested/loaded/completed = 18/18/18；critical 16、level 2；failed = 0；retries = 0；queued/inflight = 0 |
+| 单次公网导航 | 首件正式模型 2.306 秒；critical 16 件在 6.356 秒全部 ready |
+| 同会话热载 | 18/18；首件 0.490 秒；critical ready 1.877 秒 |
+| 开始后流送 | 41/41 loaded；阶段 `critical,level,frontline,rear,dressing`；首屏 Scene 与计时指标未重置 |
+| 材质 | conflict = 0；cross-owner reuse = 0；最终 41 个正式资产 owner |
+| 路径 | 入口 JS/CSS/Three chunks 均来自 `/0810-faultline-front/assets/`；18 件正式资产加载成功，控制台无根路径 404 |
 | 首次交互 | “开始新战局 · 标准”可用；计时开始，URL 保留仓库路径并写入标准 fixture/seed/quality |
-| 保存续战 | 约 00:25 保存；返回根简报出现“继续上次战况 · 标准”；恢复后约 00:33 继续，`resume` 参数已清除 |
+| 保存续战 | 保存后根简报出现“继续上次战况 · 标准”；恢复为 41/41，阶段含优先 `ensure`，`resume` 参数已清除 |
 | 控制台 | 根简报、启动、保存、根页返回与续战全程 warning/error = 0 |
 
 本次线上烟测证明站点可打开、正式模型能加载、核心入口和确定性续战可用。生产构建不会暴露开发态 `renderCalls` 等指标，因此本文不把缺失的开发 dataset 当作 FPS 证据；后续性能验收仍需记录帧时间、1% low、内存、慢网与缓存命中。
@@ -73,4 +75,4 @@ npm run preview -- --port 4181 --base "/0810-faultline-front/"
 - GitHub Pages 与 GitHub Release 是两条交付链：Pages 跟随通过质量门的 `main`，Release ZIP 绑定版本标签与独立 SHA256。
 - 30 天保留期内可重跑目标成功的 Deploy Pages workflow，以原 SHA 重新发布。
 - 更长期回滚应在 `main` revert 到已知良好提交；Quality Gate 成功后会自动触发新的 Pages 部署。
-- 每次回滚或新部署后，必须重新检查公开根简报、40/40 资产、Basis/GLB 子路径、首个命令、保存续战和控制台。
+- 每次回滚或新部署后，必须重新检查公开根简报的 18/18、开始后的 41/41、Basis/GLB 子路径、首个命令、保存续战和控制台。
