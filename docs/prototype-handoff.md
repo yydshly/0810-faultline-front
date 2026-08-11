@@ -48,8 +48,8 @@ npm.cmd run dev
 - GLB：42/42 件资产合同通过；其中 17 件有纹理资产满足 KTX2 合同，25 件为无贴图 PBR。
 - Vite：35 modules 生产构建通过。
 - 已知非阻塞提示：Three.js 主分块 549.65 kB，超过 500 kB 提示线。
-- 当前发布包：`release/faultline-front-prototype-v0.6.0-20260809T171502Z.zip`。
-- 发布包 SHA256：`4ae4317daccd2ebbc0fb6d9f727a6c55f378c432c6c76a42786b23c7f645910d`。
+- 当前发布包：`release/faultline-front-prototype-v0.6.0-20260811T064551Z.zip`。
+- 发布包 SHA256：`9bd38f523ddaf2d5e2ea3569a2856b1c9e4679c9415427d3b0eea6770d5bb1b5`。
 
 完整包信息见[本地发布就绪说明](release-readiness.md)。
 

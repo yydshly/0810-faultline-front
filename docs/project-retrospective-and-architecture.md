@@ -246,7 +246,7 @@ flowchart LR
 - 32 个测试文件、315 项测试全部通过。
 - TypeScript 严格检查通过；Vite 生产构建 35 modules。
 - Three.js 主分块 549.65 kB，是当前唯一非阻塞构建提示。
-- 最终本地包为 `faultline-front-prototype-v0.6.0-20260809T171502Z.zip`，SHA256 为 `4ae4317daccd2ebbc0fb6d9f727a6c55f378c432c6c76a42786b23c7f645910d`。
+- 最终提交绑定包为 `faultline-front-prototype-v0.6.0-20260811T064551Z.zip`，SHA256 为 `9bd38f523ddaf2d5e2ea3569a2856b1c9e4679c9415427d3b0eea6770d5bb1b5`；manifest 锁定提交 `33a9122b72a13d1a3f4b1a571509f261f2ae656d` 与标签 `v0.6.0`。
 
 最新可玩性证据见[黄金对局收口](golden-match-playability.md)，最终包和回滚说明见[发布就绪说明](release-readiness.md)。
 

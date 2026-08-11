@@ -1,20 +1,23 @@
 # 本地发布就绪说明
 
-更新时间：2026-08-10  
+更新时间：2026-08-11  
 当前包版本：`0.6.0`
 
 最终整合候选：
 
-- `release/faultline-front-prototype-v0.6.0-20260809T171502Z.zip`
-- ZIP：17,434,740 bytes；游戏文件 50 个，未压缩内容 28,370,389 bytes；ZIP 条目 52 个。
-- SHA256：`4ae4317daccd2ebbc0fb6d9f727a6c55f378c432c6c76a42786b23c7f645910d`
+- `release/faultline-front-prototype-v0.6.0-20260811T064551Z.zip`
+- ZIP：17,434,799 bytes；游戏文件 50 个，未压缩内容 28,370,389 bytes；ZIP 条目 52 个。
+- SHA256：`9bd38f523ddaf2d5e2ea3569a2856b1c9e4679c9415427d3b0eea6770d5bb1b5`
 - 同名 `.zip.sha256` 已生成；包内 `RELEASE-MANIFEST.json` 与 `SHA256SUMS.txt` 已由打包脚本逐项验证。
+- 包内源码身份：提交 `33a9122b72a13d1a3f4b1a571509f261f2ae656d`、分支 `main`、标签 `v0.6.0`、`dirty: false`、`identity: git-tagged-verified-dist`。
 
 ## 发布边界
 
 本项目当前只交付桌面 Web 本地发布包，不执行公网部署，也不承诺手机端体验。发布输入只有已经完成验证的 `dist/`；打包过程不会重新构建、下载依赖或修改游戏源码、UI 与资产。
 
 项目源码现已纳入 [GitHub 仓库](https://github.com/yydshly/0810-faultline-front)并以版本标签管理。2026-08-09 生成的既有候选包早于仓库初始化，因此其包内清单仍如实记录 `commit: null` 和 `identity: unversioned-verified-dist`；它是经过验证的历史基线，但不应被误述为提交绑定制品。仓库建立后重新运行打包脚本时，清单会自动记录当前提交、分支、精确标签与工作树状态。
+
+远端使用 [Quality Gate](https://github.com/yydshly/0810-faultline-front/actions/workflows/quality.yml) 在 `main` 推送和 Pull Request 上执行锁定依赖安装、TypeScript、315 项确定性测试、生产构建、42 项运行时 GLB/KTX2 合同与校验器 mutation 测试。版本制品发布到 [GitHub Releases](https://github.com/yydshly/0810-faultline-front/releases)，ZIP 与同名 `.sha256` 必须成对上传。
 
 ## 制作发布包
 
