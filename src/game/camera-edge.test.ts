@@ -43,6 +43,11 @@ describe('desktop visible-stage edge scrolling', () => {
       viewport,
     )).toEqual({ x: 0, z: 0 });
     expect(visibleStageEdgePanDirection(
+      { x: 1250, y: 360 },
+      stage,
+      viewport,
+    ).x).toBeGreaterThan(0);
+    expect(visibleStageEdgePanDirection(
       { x: 1279, y: 360 },
       stage,
       viewport,
@@ -80,14 +85,14 @@ describe('desktop visible-stage edge scrolling', () => {
 
     expect(right.x).toBeCloseTo(Math.SQRT1_2);
     expect(right.z).toBeCloseTo(-Math.SQRT1_2);
-    expect(down.x).toBeCloseTo(Math.SQRT1_2);
-    expect(down.z).toBeCloseTo(Math.SQRT1_2);
+    expect(down.x).toBeGreaterThan(Math.SQRT1_2);
+    expect(down.z).toBeGreaterThan(Math.SQRT1_2);
     expect(left.x).toBeCloseTo(-right.x);
     expect(left.z).toBeCloseTo(-right.z);
     expect(up.x).toBeCloseTo(-down.x);
     expect(up.z).toBeCloseTo(-down.z);
     expect(Math.hypot(right.x, right.z)).toBeCloseTo(1);
-    expect(Math.hypot(down.x, down.z)).toBeCloseTo(1);
+    expect(Math.hypot(down.x, down.z) * Math.sin((55 * Math.PI) / 180)).toBeCloseTo(1);
   });
 
   it('does not pan for a pointer outside the viewport', () => {

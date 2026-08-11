@@ -21,7 +21,8 @@ export interface CameraPanDirection {
 }
 
 export const DEFAULT_EDGE_PAN_MARGIN = 36;
-export const DEFAULT_VIEWPORT_EDGE_PAN_MARGIN = 12;
+export const DEFAULT_VIEWPORT_EDGE_PAN_MARGIN = DEFAULT_EDGE_PAN_MARGIN;
+export const DEFAULT_CAMERA_ELEVATION_RADIANS = (55 * Math.PI) / 180;
 export const EDGE_PAN_BLOCKING_SELECTOR = [
   'button',
   'a',
@@ -37,13 +38,19 @@ export function screenPanToWorldPan(
   screenX: number,
   screenY: number,
   cameraYawRadians = Math.PI / 4,
+  cameraElevationRadians = DEFAULT_CAMERA_ELEVATION_RADIANS,
 ): CameraPanDirection {
-  if (![screenX, screenY, cameraYawRadians].every(Number.isFinite)) return { x: 0, z: 0 };
+  if (![screenX, screenY, cameraYawRadians, cameraElevationRadians].every(Number.isFinite)) {
+    return { x: 0, z: 0 };
+  }
+  const elevationProjection = Math.sin(cameraElevationRadians);
+  if (Math.abs(elevationProjection) < 1e-6) return { x: 0, z: 0 };
   const cosine = Math.cos(cameraYawRadians);
   const sine = Math.sin(cameraYawRadians);
+  const projectedScreenY = screenY / elevationProjection;
   return {
-    x: screenX * cosine + screenY * sine,
-    z: -screenX * sine + screenY * cosine,
+    x: screenX * cosine + projectedScreenY * sine,
+    z: -screenX * sine + projectedScreenY * cosine,
   };
 }
 

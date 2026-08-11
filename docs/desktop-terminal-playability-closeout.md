@@ -97,15 +97,16 @@ The activation band is 36 CSS pixels instead of the previous 14-pixel binary
 strip, and movement ramps progressively to a 42 world-unit/second maximum as
 the pointer approaches the visible battlefield edge. Pointer tracking continues
 at window level when the cursor crosses from the canvas into non-interactive
-shell space. A separate 12-pixel viewport-edge fallback keeps all four physical
+shell space. A matching 36-pixel viewport-edge fallback keeps all four physical
 screen edges active, including the far side of the fixed command rail. Only
 actual buttons, links, form controls, dialogs, and the interactive minimap
 suppress edge-pan; empty topbar, dock, and rail surfaces no longer disable it.
 
 Edge, arrow-key, and middle-drag input is converted from screen space through
-the fixed 45-degree camera yaw before changing the world target. Up, down, left,
-and right therefore remain visually aligned with the corresponding screen edge
-instead of drifting along raw world X/Z axes.
+the fixed 45-degree camera yaw before changing the world target. Vertical input
+also compensates for the 55-degree ground-projection shortening, so all four
+directions have the same perceived screen speed instead of drifting or feeling
+slower along raw world X/Z axes.
 
 Regression coverage locks the progressive response and the 1280 x 720 layout
 where the visible battlefield ends at x=964 and the remaining 316 pixels belong
