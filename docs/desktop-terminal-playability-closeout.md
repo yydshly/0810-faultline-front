@@ -94,8 +94,9 @@ The earlier desktop playthrough exposed two camera/selection symptoms:
 
 Edge-pan now uses the visible intersection of the stage and browser viewport.
 The activation band is 36 CSS pixels instead of the previous 14-pixel binary
-strip, and movement ramps progressively to a 42 world-unit/second maximum as
-the pointer approaches the visible battlefield edge. Pointer tracking continues
+strip. Edge input now eases toward an 18 screen-unit/second maximum and eases
+out more quickly after leaving the edge, instead of jumping directly to full
+speed. Pointer tracking continues
 at window level when the cursor crosses from the canvas into non-interactive
 shell space. A matching 36-pixel viewport-edge fallback keeps all four physical
 screen edges active, including the far side of the fixed command rail. Only
@@ -106,7 +107,10 @@ Edge, arrow-key, and middle-drag input is converted from screen space through
 the fixed 45-degree camera yaw before changing the world target. Vertical input
 also compensates for the 55-degree ground-projection shortening, so all four
 directions have the same perceived screen speed instead of drifting or feeling
-slower along raw world X/Z axes.
+slower along raw world X/Z axes. Corner input is magnitude-limited, and camera
+movement enters a 14-world-unit soft boundary zone before reaching an inset
+world limit. Both world axes slow and clamp as one vector, preventing the prior
+one-axis stop, diagonal shear, and abrupt overscan into the dark map exterior.
 
 Regression coverage locks the progressive response and the 1280 x 720 layout
 where the visible battlefield ends at x=964 and the remaining 316 pixels belong

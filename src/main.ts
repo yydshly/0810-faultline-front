@@ -3,7 +3,9 @@ import { BUILDING_DEFS, GAME_TICK_SECONDS, UNIT_DEFS } from './game/config';
 import { GameAudio } from './game/audio';
 import {
   EDGE_PAN_BLOCKING_SELECTOR,
+  limitCameraPanMagnitude,
   screenPanToWorldPan,
+  smoothCameraPanVelocity,
   visibleStageEdgePanDirection,
 } from './game/camera-edge';
 import {
@@ -58,7 +60,8 @@ const SAVE_SLOT_KEY = 'faultline-front.save.v3';
 const AUDIO_MUTED_KEY = 'faultline-front.audio-muted.v1';
 const RENDER_QUALITY_KEY = 'faultline-front.render-quality.v1';
 const KEYBOARD_PAN_SPEED = 25;
-const EDGE_PAN_MAX_SPEED = 42;
+const EDGE_PAN_MAX_SPEED = 18;
+const CAMERA_PAN_MAX_SPEED = 25;
 const MIDDLE_DRAG_PAN_SPEED = 0.064;
 
 interface SavedDeploymentSlot {
@@ -92,6 +95,7 @@ class FaultlineApp {
   private animationFrame = 0;
   private pointer = { x: 0, y: 0, inside: false };
   private edgePanBlocked = false;
+  private cameraPanVelocity = { x: 0, z: 0 };
   private pressedKeys = new Set<string>();
   private controlGroups = new Map<number, string[]>();
   private lastGroupTap = { group: -1, at: 0 };
@@ -308,6 +312,7 @@ class FaultlineApp {
       steps += 1;
     }
     if (!this.tacticalOverlayPaused) this.updateCamera(elapsed);
+    else this.cameraPanVelocity = { x: 0, z: 0 };
     this.pruneSelection();
     this.renderNow();
     this.animationFrame = requestAnimationFrame((next) => this.frame(next));
@@ -345,6 +350,7 @@ class FaultlineApp {
       if (event.relatedTarget !== null) return;
       this.pointer.inside = false;
       this.edgePanBlocked = false;
+      this.cameraPanVelocity = { x: 0, z: 0 };
     });
     window.addEventListener('keydown', (event) => {
       void this.tryUnlockAudio();
@@ -356,6 +362,7 @@ class FaultlineApp {
       this.middleDrag = null;
       this.pointer.inside = false;
       this.edgePanBlocked = false;
+      this.cameraPanVelocity = { x: 0, z: 0 };
     });
   }
 
@@ -377,6 +384,7 @@ class FaultlineApp {
     this.trackPointer(event);
     if (event.button === 1) {
       event.preventDefault();
+      this.cameraPanVelocity = { x: 0, z: 0 };
       this.middleDrag = { x: event.clientX, y: event.clientY };
       this.hud.stage.setPointerCapture(event.pointerId);
       return;
@@ -552,13 +560,12 @@ class FaultlineApp {
 
   private updateCamera(dt: number): void {
     if (!this.scene) return;
-    const keyboardSpeed = KEYBOARD_PAN_SPEED * dt;
-    let dx = 0;
-    let dz = 0;
-    if (this.pressedKeys.has('arrowup')) dz -= keyboardSpeed;
-    if (this.pressedKeys.has('arrowdown')) dz += keyboardSpeed;
-    if (this.pressedKeys.has('arrowleft')) dx -= keyboardSpeed;
-    if (this.pressedKeys.has('arrowright')) dx += keyboardSpeed;
+    let targetX = 0;
+    let targetZ = 0;
+    if (this.pressedKeys.has('arrowup')) targetZ -= KEYBOARD_PAN_SPEED;
+    if (this.pressedKeys.has('arrowdown')) targetZ += KEYBOARD_PAN_SPEED;
+    if (this.pressedKeys.has('arrowleft')) targetX -= KEYBOARD_PAN_SPEED;
+    if (this.pressedKeys.has('arrowright')) targetX += KEYBOARD_PAN_SPEED;
 
     if (this.pointer.inside && !this.edgePanBlocked) {
       const rect = this.hud.stage.getBoundingClientRect();
@@ -567,12 +574,24 @@ class FaultlineApp {
         rect,
         { width: window.innerWidth, height: window.innerHeight },
       );
-      const edgeSpeed = EDGE_PAN_MAX_SPEED * dt;
-      dx += direction.x * edgeSpeed;
-      dz += direction.z * edgeSpeed;
+      const normalizedDirection = limitCameraPanMagnitude(direction, 1);
+      targetX += normalizedDirection.x * EDGE_PAN_MAX_SPEED;
+      targetZ += normalizedDirection.z * EDGE_PAN_MAX_SPEED;
     }
-    if (dx !== 0 || dz !== 0) {
-      const worldPan = screenPanToWorldPan(dx, dz);
+    const targetVelocity = limitCameraPanMagnitude(
+      { x: targetX, z: targetZ },
+      CAMERA_PAN_MAX_SPEED,
+    );
+    this.cameraPanVelocity = smoothCameraPanVelocity(
+      this.cameraPanVelocity,
+      targetVelocity,
+      dt,
+    );
+    if (this.cameraPanVelocity.x !== 0 || this.cameraPanVelocity.z !== 0) {
+      const worldPan = screenPanToWorldPan(
+        this.cameraPanVelocity.x * dt,
+        this.cameraPanVelocity.z * dt,
+      );
       this.scene.pan(worldPan.x, worldPan.z);
     }
   }

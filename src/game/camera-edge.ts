@@ -20,9 +20,17 @@ export interface CameraPanDirection {
   z: number;
 }
 
+export interface CameraPanBounds {
+  minimum: number;
+  maximum: number;
+  softZone: number;
+}
+
 export const DEFAULT_EDGE_PAN_MARGIN = 36;
 export const DEFAULT_VIEWPORT_EDGE_PAN_MARGIN = DEFAULT_EDGE_PAN_MARGIN;
 export const DEFAULT_CAMERA_ELEVATION_RADIANS = (55 * Math.PI) / 180;
+export const DEFAULT_CAMERA_PAN_ACCELERATION = 4;
+export const DEFAULT_CAMERA_PAN_DECELERATION = 14;
 export const EDGE_PAN_BLOCKING_SELECTOR = [
   'button',
   'a',
@@ -52,6 +60,94 @@ export function screenPanToWorldPan(
     x: screenX * cosine + projectedScreenY * sine,
     z: -screenX * sine + projectedScreenY * cosine,
   };
+}
+
+export function limitCameraPanMagnitude(
+  direction: CameraPanDirection,
+  maximum: number,
+): CameraPanDirection {
+  if (![direction.x, direction.z, maximum].every(Number.isFinite) || maximum <= 0) {
+    return { x: 0, z: 0 };
+  }
+  const magnitude = Math.hypot(direction.x, direction.z);
+  if (magnitude <= maximum || magnitude <= 1e-6) return { ...direction };
+  const scale = maximum / magnitude;
+  return { x: direction.x * scale, z: direction.z * scale };
+}
+
+export function smoothCameraPanVelocity(
+  current: CameraPanDirection,
+  target: CameraPanDirection,
+  deltaSeconds: number,
+  acceleration = DEFAULT_CAMERA_PAN_ACCELERATION,
+  deceleration = DEFAULT_CAMERA_PAN_DECELERATION,
+): CameraPanDirection {
+  const values = [
+    current.x, current.z, target.x, target.z,
+    deltaSeconds, acceleration, deceleration,
+  ];
+  if (!values.every(Number.isFinite) || deltaSeconds <= 0 || acceleration <= 0 || deceleration <= 0) {
+    return { x: 0, z: 0 };
+  }
+  const currentMagnitude = Math.hypot(current.x, current.z);
+  const targetMagnitude = Math.hypot(target.x, target.z);
+  const aligned = current.x * target.x + current.z * target.z >= 0;
+  const rate = aligned && targetMagnitude > currentMagnitude ? acceleration : deceleration;
+  const alpha = 1 - Math.exp(-rate * Math.min(deltaSeconds, 0.2));
+  const next = {
+    x: current.x + (target.x - current.x) * alpha,
+    z: current.z + (target.z - current.z) * alpha,
+  };
+  if (targetMagnitude <= 1e-6 && Math.hypot(next.x, next.z) < 0.01) return { x: 0, z: 0 };
+  return next;
+}
+
+function smoothBoundaryScale(distance: number, softZone: number): number {
+  if (softZone <= 0 || distance >= softZone) return 1;
+  const normalized = Math.min(1, Math.max(0, distance / softZone));
+  return normalized * normalized * (3 - 2 * normalized);
+}
+
+/** Slow and clamp a pan as one vector so an isometric direction never shears at a world edge. */
+export function boundedCameraPanDelta(
+  current: CameraPanDirection,
+  requested: CameraPanDirection,
+  bounds: CameraPanBounds,
+): CameraPanDirection {
+  const values = [
+    current.x, current.z, requested.x, requested.z,
+    bounds.minimum, bounds.maximum, bounds.softZone,
+  ];
+  if (!values.every(Number.isFinite) || bounds.maximum <= bounds.minimum || bounds.softZone < 0) {
+    return { x: 0, z: 0 };
+  }
+
+  let scale = 1;
+  if (requested.x < 0) {
+    scale = Math.min(scale, smoothBoundaryScale(current.x - bounds.minimum, bounds.softZone));
+  } else if (requested.x > 0) {
+    scale = Math.min(scale, smoothBoundaryScale(bounds.maximum - current.x, bounds.softZone));
+  }
+  if (requested.z < 0) {
+    scale = Math.min(scale, smoothBoundaryScale(current.z - bounds.minimum, bounds.softZone));
+  } else if (requested.z > 0) {
+    scale = Math.min(scale, smoothBoundaryScale(bounds.maximum - current.z, bounds.softZone));
+  }
+
+  const scaled = { x: requested.x * scale, z: requested.z * scale };
+  let crossingScale = 1;
+  if (scaled.x < 0 && current.x + scaled.x < bounds.minimum) {
+    crossingScale = Math.min(crossingScale, (bounds.minimum - current.x) / scaled.x);
+  } else if (scaled.x > 0 && current.x + scaled.x > bounds.maximum) {
+    crossingScale = Math.min(crossingScale, (bounds.maximum - current.x) / scaled.x);
+  }
+  if (scaled.z < 0 && current.z + scaled.z < bounds.minimum) {
+    crossingScale = Math.min(crossingScale, (bounds.minimum - current.z) / scaled.z);
+  } else if (scaled.z > 0 && current.z + scaled.z > bounds.maximum) {
+    crossingScale = Math.min(crossingScale, (bounds.maximum - current.z) / scaled.z);
+  }
+  crossingScale = Math.min(1, Math.max(0, crossingScale));
+  return { x: scaled.x * crossingScale, z: scaled.z * crossingScale };
 }
 
 function edgePanAxis(position: number, minimum: number, maximum: number, margin: number): number {

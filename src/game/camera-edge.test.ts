@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  boundedCameraPanDelta,
   EDGE_PAN_BLOCKING_SELECTOR,
+  limitCameraPanMagnitude,
   screenPanToWorldPan,
+  smoothCameraPanVelocity,
   visibleStageEdgePanDirection,
 } from './camera-edge';
 
@@ -93,6 +96,47 @@ describe('desktop visible-stage edge scrolling', () => {
     expect(up.z).toBeCloseTo(-down.z);
     expect(Math.hypot(right.x, right.z)).toBeCloseTo(1);
     expect(Math.hypot(down.x, down.z) * Math.sin((55 * Math.PI) / 180)).toBeCloseTo(1);
+  });
+
+  it('limits corner input to the same maximum speed as a single edge', () => {
+    const limited = limitCameraPanMagnitude({ x: 34, z: 34 }, 34);
+    expect(Math.hypot(limited.x, limited.z)).toBeCloseTo(34);
+    expect(limited.x).toBeCloseTo(limited.z);
+  });
+
+  it('ramps camera velocity in and decelerates faster after leaving the edge', () => {
+    const entering = smoothCameraPanVelocity({ x: 0, z: 0 }, { x: 34, z: 0 }, 0.1);
+    expect(entering.x).toBeGreaterThan(0);
+    expect(entering.x).toBeLessThan(34);
+
+    const released = smoothCameraPanVelocity(entering, { x: 0, z: 0 }, 0.1);
+    expect(released.x).toBeGreaterThanOrEqual(0);
+    expect(released.x).toBeLessThan(entering.x);
+  });
+
+  it('slows both world axes together near a boundary instead of shearing the direction', () => {
+    const current = { x: -71, z: 10 };
+    const applied = boundedCameraPanDelta(
+      current,
+      { x: -4, z: -4 },
+      { minimum: -72, maximum: 72, softZone: 14 },
+    );
+
+    expect(applied.x).toBeCloseTo(applied.z);
+    expect(Math.abs(applied.x)).toBeLessThan(0.1);
+    expect(current.x + applied.x).toBeGreaterThanOrEqual(-72);
+  });
+
+  it('preserves the requested direction when a large delta reaches the hard boundary', () => {
+    const current = { x: 70, z: -10 };
+    const applied = boundedCameraPanDelta(
+      current,
+      { x: 20, z: 10 },
+      { minimum: -72, maximum: 72, softZone: 0 },
+    );
+
+    expect(current.x + applied.x).toBeCloseTo(72);
+    expect(applied.z / applied.x).toBeCloseTo(0.5);
   });
 
   it('does not pan for a pointer outside the viewport', () => {

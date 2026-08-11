@@ -10,6 +10,7 @@ import {
   PLAYER_COLOR,
   UNIT_DEFS,
 } from './config';
+import { boundedCameraPanDelta } from './camera-edge';
 import {
   FACTION_VISUALS,
   HEALTH_BAR_PRESENTATION,
@@ -1438,6 +1439,8 @@ const CAMERA_DISTANCE = 180;
 const DEFAULT_VIEW_HEIGHT = 48;
 const MIN_VIEW_HEIGHT = 32;
 const MAX_VIEW_HEIGHT = 80;
+const CAMERA_TARGET_EDGE_INSET = 8;
+const CAMERA_BOUNDARY_SLOW_ZONE = 14;
 const MAX_EFFECTS = 128;
 const FOG_TEXTURE_SIZE = 64;
 const PRESENTATION_LOD_VIEW_MARGIN = 10;
@@ -2945,8 +2948,14 @@ export class BattlefieldScene {
 
   pan(dx: number, dz: number): void {
     if (this.disposed) return;
-    this.cameraTarget.x = clampMapCoordinate(this.cameraTarget.x + dx);
-    this.cameraTarget.z = clampMapCoordinate(this.cameraTarget.z + dz);
+    const limit = MAP_HALF_SIZE - CAMERA_TARGET_EDGE_INSET;
+    const applied = boundedCameraPanDelta(
+      { x: this.cameraTarget.x, z: this.cameraTarget.z },
+      { x: dx, z: dz },
+      { minimum: -limit, maximum: limit, softZone: CAMERA_BOUNDARY_SLOW_ZONE },
+    );
+    this.cameraTarget.x += applied.x;
+    this.cameraTarget.z += applied.z;
     this.updateCameraTransform();
   }
 
@@ -2968,7 +2977,12 @@ export class BattlefieldScene {
 
   focus(position: Vec2): void {
     if (this.disposed) return;
-    this.cameraTarget.set(clampMapCoordinate(position.x), 0, clampMapCoordinate(position.z));
+    const limit = MAP_HALF_SIZE - CAMERA_TARGET_EDGE_INSET;
+    this.cameraTarget.set(
+      THREE.MathUtils.clamp(position.x, -limit, limit),
+      0,
+      THREE.MathUtils.clamp(position.z, -limit, limit),
+    );
     this.updateCameraTransform();
   }
 
