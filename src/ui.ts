@@ -2077,6 +2077,22 @@ export class GameHUD {
         context.stroke();
       }
     }
+    const reducedMinimapMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+    for (const notification of state.notifications) {
+      if (!notification.at) continue;
+      const x = mapX(notification.at.x);
+      const y = mapY(notification.at.z);
+      const pulse = reducedMinimapMotion ? 6.5 : 5.5 + (state.tick % 16) / 8;
+      context.strokeStyle = notification.tone === 'danger' ? '#ff6b58' : '#f0b54a';
+      context.lineWidth = 1.6;
+      context.beginPath();
+      context.arc(x, y, pulse, 0, Math.PI * 2);
+      context.stroke();
+      context.fillStyle = notification.tone === 'danger' ? '#ff4438' : '#f0b54a';
+      context.beginPath();
+      context.arc(x, y, 2.2, 0, Math.PI * 2);
+      context.fill();
+    }
   }
 
   private setActiveArmoryTab(tab: ArmoryTab, focusTab = false): void {

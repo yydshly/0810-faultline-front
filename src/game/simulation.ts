@@ -58,7 +58,17 @@ interface PendingImpact {
   baseDamage: number;
   damageMultipliers: Record<ArmorClass, number>;
   splashRadius: number;
+  sourceAt: Vec2;
   fallbackAt: Vec2;
+}
+
+type PlayerAttackAlertCategory = 'unit' | 'harvester' | 'building' | 'hq';
+
+interface EnemyCombatResponse {
+  home: Vec2;
+  contact: Vec2;
+  expiresTick: number;
+  returning: boolean;
 }
 
 interface IncomeRecord {
@@ -91,6 +101,13 @@ const NAVIGATION_CELL_SIZE = 1.5;
 const NAVIGATION_PADDING = 0.2;
 const FORMATION_MIN_SPACING = 2.8;
 const AI_UPDATE_TICKS = Math.max(1, Math.round(1 / GAME_TICK_SECONDS));
+const PLAYER_ATTACK_ALERT_COOLDOWN_TICKS = Math.max(1, Math.round(4 / GAME_TICK_SECONDS));
+const ENEMY_COMBAT_RESPONSE_TICKS = Math.max(1, Math.round(10 / GAME_TICK_SECONDS));
+const ENEMY_COMBAT_RESPONSE_RADIUS = 34;
+const ENEMY_COMBAT_RESPONSE_HQ_RADIUS = 42;
+const ENEMY_COMBAT_RESPONSE_MAX_UNITS = 4;
+const ENEMY_COMBAT_RESPONSE_HQ_MAX_UNITS = 6;
+const ENEMY_COMBAT_RETURN_DISTANCE = 0.75;
 const BASE_BUILDING_SIGHT = 7;
 const HQ_RADAR_RANGE = 18;
 const RELAY_RADAR_RANGE = 15;
@@ -291,6 +308,8 @@ export class GameSimulation {
   private readonly orderQueues = new Map<string, UnitOrder[]>();
   private readonly disconnectReserve = new Map<string, number>();
   private readonly incomeRecords: Record<ActiveTeam, IncomeRecord[]> = { player: [], enemy: [] };
+  private readonly playerAttackAlertReadyTicks = new Map<PlayerAttackAlertCategory, number>();
+  private readonly enemyCombatResponses = new Map<string, EnemyCombatResponse>();
   private enemyAiMemory: AIPlannerMemory = createInitialAIPlannerMemory();
   private readonly visibilityGrid = new VisibilityGrid({
     bounds: { minX: -MAP_HALF_SIZE, maxX: MAP_HALF_SIZE, minZ: -MAP_HALF_SIZE, maxZ: MAP_HALF_SIZE },
@@ -496,6 +515,8 @@ export class GameSimulation {
     this.disconnectReserve.clear();
     this.incomeRecords.player = [];
     this.incomeRecords.enemy = [];
+    this.playerAttackAlertReadyTicks.clear();
+    this.enemyCombatResponses.clear();
     this.rngState = this.seedToRngState(this.initialSeed);
     this.entitySequence = 1;
     this.impactSequence = 1;
@@ -509,6 +530,15 @@ export class GameSimulation {
       .sort(([left], [right]) => compareStableText(left, right))
       .map(([id, orders]) => [id, orders.map((order) => cloneOrder(order))]);
     const reserveSnapshot = [...this.disconnectReserve.entries()].sort(([left], [right]) => compareStableText(left, right));
+    const alertSnapshot = [...this.playerAttackAlertReadyTicks.entries()].sort(([left], [right]) => compareStableText(left, right));
+    const combatResponseSnapshot = [...this.enemyCombatResponses.entries()]
+      .sort(([left], [right]) => compareStableText(left, right))
+      .map(([id, response]) => [id, {
+        home: cloneVec(response.home),
+        contact: cloneVec(response.contact),
+        expiresTick: response.expiresTick,
+        returning: response.returning,
+      }]);
     const authoritative = {
       seed: this.state.seed,
       tick: this.state.tick,
@@ -519,6 +549,8 @@ export class GameSimulation {
       entitySequence: this.entitySequence,
       impactSequence: this.impactSequence,
       enemyAiMemory: this.enemyAiMemory,
+      playerAttackAlertReadyTicks: alertSnapshot,
+      enemyCombatResponses: combatResponseSnapshot,
       units: stableById(this.state.units).map((unit) => ({
         id: unit.id,
         team: unit.team,
@@ -606,6 +638,7 @@ export class GameSimulation {
     this.updateIntel();
     this.updateMissionDirector();
     this.runEnemyAi();
+    this.updateEnemyCombatResponses();
 
     const snapshots = stableById(this.state.units).map<UnitSnapshot>((unit) => ({
       id: unit.id,
@@ -765,6 +798,7 @@ export class GameSimulation {
       baseDamage: definition.damage,
       damageMultipliers: { ...multiplierTable },
       splashRadius: unit.kind === 'artillery' ? ARTILLERY_SPLASH_RADIUS : 0,
+      sourceAt: cloneVec(unit.position),
       fallbackAt: cloneVec(target.position),
     });
     this.impactSequence += 1;
@@ -842,6 +876,7 @@ export class GameSimulation {
         baseDamage: weapon.damage,
         damageMultipliers: { ...multipliers },
         splashRadius: weapon.splashRadius,
+        sourceAt: cloneVec(building.position),
         fallbackAt: cloneVec(target.position),
       });
       this.impactSequence += 1;
@@ -908,6 +943,7 @@ export class GameSimulation {
           ? impact.baseDamage * multiplierTable[armorClassFor(candidate)] * factor
           : impact.damage;
         candidate.hp = Math.max(0, candidate.hp - damage);
+        if (damage > EPSILON) this.handleCombatDamage(candidate, impact, damage);
         if (candidate.hp <= 0) {
           this.events.push({
             type: 'destroyed',
@@ -917,6 +953,98 @@ export class GameSimulation {
             targetId: candidate.id,
           });
         }
+      }
+    }
+  }
+
+  private handleCombatDamage(candidate: DamageTarget, impact: PendingImpact, damage: number): void {
+    if (candidate.team === 'player' && impact.team === 'enemy') {
+      this.emitPlayerAttackAlert(candidate, damage);
+      return;
+    }
+    if (candidate.team === 'enemy' && impact.team === 'player') {
+      if (this.isEnemyVisibleTo('enemy', impact.sourceId)) return;
+      if (this.state.mission.kind === 'breakthrough' && this.state.mission.phase !== 'command') return;
+      this.registerEnemyCombatResponse(candidate, impact.sourceAt);
+    }
+  }
+
+  private emitPlayerAttackAlert(candidate: DamageTarget, damage: number): void {
+    const category: PlayerAttackAlertCategory = candidate.entityType === 'building'
+      ? candidate.kind === 'hq' ? 'hq' : 'building'
+      : candidate.kind === 'harvester' ? 'harvester' : 'unit';
+    const readyTick = this.playerAttackAlertReadyTicks.get(category) ?? 0;
+    if (this.state.tick < readyTick) return;
+    this.playerAttackAlertReadyTicks.set(category, this.state.tick + PLAYER_ATTACK_ALERT_COOLDOWN_TICKS);
+
+    const tone: GameState['notifications'][number]['tone'] = category === 'unit' ? 'warning' : 'danger';
+    const text = category === 'hq'
+      ? '指挥核心遭到攻击'
+      : category === 'building'
+        ? `${candidate.entityType === 'building' ? BUILDING_DEFS[candidate.kind].label : '基地设施'}遭到攻击`
+        : category === 'harvester'
+          ? '采矿车遭到袭击'
+          : '我方部队遭到攻击';
+    this.addNotification(tone, text, category === 'hq' ? 7 : 5, candidate.position);
+    this.events.push({
+      type: 'alert',
+      at: cloneVec(candidate.position),
+      team: 'player',
+      targetId: candidate.id,
+      amount: Math.max(1, damage),
+    });
+  }
+
+  private registerEnemyCombatResponse(candidate: DamageTarget, contact: Vec2): void {
+    if (!finiteVec(contact)) return;
+    const hqUnderAttack = candidate.entityType === 'building' && candidate.kind === 'hq';
+    const responseRadius = hqUnderAttack ? ENEMY_COMBAT_RESPONSE_HQ_RADIUS : ENEMY_COMBAT_RESPONSE_RADIUS;
+    const maximumResponders = hqUnderAttack
+      ? ENEMY_COMBAT_RESPONSE_HQ_MAX_UNITS
+      : ENEMY_COMBAT_RESPONSE_MAX_UNITS;
+    const responders = stableById(this.state.units.filter((unit) => (
+      unit.team === 'enemy'
+      && unit.hp > 0
+      && UNIT_DEFS[unit.kind].damage > 0
+      && distance(unit.position, candidate.position) <= responseRadius
+      && (unit.order.type === 'idle' || this.enemyCombatResponses.has(unit.id))
+    ))).sort((left, right) => {
+      const distanceDifference = distanceSquared(left.position, candidate.position)
+        - distanceSquared(right.position, candidate.position);
+      return Math.abs(distanceDifference) > EPSILON
+        ? distanceDifference
+        : compareStableText(left.id, right.id);
+    }).slice(0, maximumResponders);
+
+    for (const unit of responders) {
+      const previous = this.enemyCombatResponses.get(unit.id);
+      this.enemyCombatResponses.set(unit.id, {
+        home: previous ? cloneVec(previous.home) : cloneVec(unit.position),
+        contact: cloneVec(contact),
+        expiresTick: this.state.tick + ENEMY_COMBAT_RESPONSE_TICKS,
+        returning: false,
+      });
+      this.assignOrder(unit, { type: 'attackMove', target: cloneVec(contact) }, false);
+    }
+  }
+
+  private updateEnemyCombatResponses(): void {
+    for (const [unitId, response] of [...this.enemyCombatResponses.entries()]
+      .sort(([left], [right]) => compareStableText(left, right))) {
+      const unit = this.state.units.find((candidate) => candidate.id === unitId && candidate.team === 'enemy' && candidate.hp > 0);
+      if (!unit) {
+        this.enemyCombatResponses.delete(unitId);
+        continue;
+      }
+      if (this.state.tick < response.expiresTick) continue;
+      if (!response.returning) {
+        response.returning = true;
+        this.assignOrder(unit, { type: 'move', target: cloneVec(response.home) }, false);
+        continue;
+      }
+      if (distance(unit.position, response.home) <= unit.radius + ENEMY_COMBAT_RETURN_DISTANCE) {
+        this.enemyCombatResponses.delete(unitId);
+        if (unit.order.type === 'move') this.completeOrder(unit);
       }
     }
   }
@@ -2001,7 +2129,9 @@ export class GameSimulation {
         case 'rally': {
           const units = intent.unitIds
             .map((id) => this.state.units.find((unit) => unit.id === id && unit.team === team && unit.hp > 0))
-            .filter((unit): unit is UnitState => unit !== undefined && !this.isMissionDirectorLocked(unit.id));
+            .filter((unit): unit is UnitState => unit !== undefined
+              && !this.isMissionDirectorLocked(unit.id)
+              && !this.enemyCombatResponses.has(unit.id));
           const orders = this.planFormationOrders(units, intent.position, 'move', false);
           if (orders) for (const { unit, order } of orders) this.assignOrder(unit, order, false);
           break;
@@ -2013,7 +2143,8 @@ export class GameSimulation {
             .map((id) => this.state.units.find((unit) => unit.id === id && unit.team === team && unit.hp > 0))
             .filter((unit): unit is UnitState => unit !== undefined
               && UNIT_DEFS[unit.kind].damage > 0
-              && !this.isMissionDirectorLocked(unit.id));
+              && !this.isMissionDirectorLocked(unit.id)
+              && !this.enemyCombatResponses.has(unit.id));
           for (const unit of units) this.assignOrder(unit, { type: 'attack', targetId: target.id }, false);
           break;
         }
@@ -2022,7 +2153,9 @@ export class GameSimulation {
           if (!target || target.team !== team || target.hp <= 0 || target.hp >= target.maxHp - EPSILON) break;
           const engineers = intent.unitIds
             .map((id) => this.state.units.find((unit) => unit.id === id && unit.team === team && unit.kind === 'engineer'))
-            .filter((unit): unit is UnitState => unit !== undefined && !this.isMissionDirectorLocked(unit.id));
+            .filter((unit): unit is UnitState => unit !== undefined
+              && !this.isMissionDirectorLocked(unit.id)
+              && !this.enemyCombatResponses.has(unit.id));
           for (const engineer of engineers) {
             this.assignOrder(engineer, { type: 'repair', targetId: target.id }, false);
           }
@@ -2215,6 +2348,9 @@ export class GameSimulation {
     this.state.buildings = this.state.buildings.filter((building) => building.hp > 0);
     for (const id of [...this.orderQueues.keys()]) {
       if (!survivingUnitIds.has(id)) this.orderQueues.delete(id);
+    }
+    for (const id of [...this.enemyCombatResponses.keys()]) {
+      if (!survivingUnitIds.has(id)) this.enemyCombatResponses.delete(id);
     }
     for (const id of [...this.disconnectReserve.keys()]) {
       if (!survivingBuildingIds.has(id)) this.disconnectReserve.delete(id);
@@ -2470,12 +2606,14 @@ export class GameSimulation {
     tone: GameState['notifications'][number]['tone'],
     text: string,
     lifetime: number,
+    at?: Vec2,
   ): void {
     this.state.notifications.push({
       id: this.notificationSequence,
       tone,
       text,
       expiresAt: this.state.elapsed + lifetime,
+      at: at ? cloneVec(at) : undefined,
     });
     this.notificationSequence += 1;
   }

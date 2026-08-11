@@ -141,6 +141,9 @@ export function mapSimulationEventToAudioCue(
     case 'destroyed':
       kind = 'destroyed';
       break;
+    case 'alert':
+      kind = 'warning';
+      break;
     case 'deposit':
       kind = 'deposit';
       break;

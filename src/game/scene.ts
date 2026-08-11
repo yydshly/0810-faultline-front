@@ -6668,6 +6668,9 @@ export class BattlefieldScene {
           this.enforceAuthoredWreckBudget();
           break;
         }
+        case 'alert':
+          this.showCommandMarker(event.at, 'danger');
+          break;
         case 'command':
           this.showCommandMarker(event.at, team === 'enemy' ? 'attack' : 'move');
           break;

@@ -145,6 +145,7 @@ describe('SimulationEvent 音效映射', () => {
       [event('shot', { amount: 10, radius: 3 }), 'shotHeavy'],
       [event('impact'), 'impact'],
       [event('destroyed'), 'destroyed'],
+      [event('alert'), 'warning'],
       [event('deposit'), 'deposit'],
       [event('built'), 'buildComplete'],
       [event('produced'), 'productionComplete'],

@@ -167,6 +167,7 @@ export interface NotificationState {
   tone: 'info' | 'success' | 'warning' | 'danger';
   text: string;
   expiresAt: number;
+  at?: Vec2;
 }
 
 export type AITacticalPhase = 'economy' | 'rally' | 'attack' | 'defend' | 'recover';
@@ -233,7 +234,7 @@ export interface BuildValidation {
 }
 
 export interface SimulationEvent {
-  type: 'shot' | 'impact' | 'destroyed' | 'deposit' | 'built' | 'produced' | 'command' | 'repair' | 'research' | 'cancelled';
+  type: 'shot' | 'impact' | 'destroyed' | 'alert' | 'deposit' | 'built' | 'produced' | 'command' | 'repair' | 'research' | 'cancelled';
   at: Vec2;
   team?: Team;
   sourceId?: string;

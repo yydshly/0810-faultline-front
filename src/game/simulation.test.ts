@@ -126,6 +126,109 @@ describe('GameSimulation 确定性与命令', () => {
     expect(targetAfter).toBeLessThan(targetBefore);
   });
 
+  it('emits one high-priority player alert when a friendly unit is hit', () => {
+    const simulation = new GameSimulation(304, 'combat');
+    const player = simulation.state.units.find((unit) => unit.id === 'u-fixture-player');
+    const enemy = simulation.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    expect(player).toBeDefined();
+    expect(enemy).toBeDefined();
+    if (!player || !enemy) return;
+
+    player.position = { x: 0, z: 13.5 };
+    enemy.position = { x: 0, z: 0 };
+    enemy.kind = 'artillery';
+    enemy.radius = UNIT_DEFS.artillery.radius;
+    enemy.maxHp = UNIT_DEFS.artillery.maxHp;
+    enemy.hp = enemy.maxHp;
+    enemy.order = { type: 'attack', targetId: player.id };
+
+    stepTicks(simulation, 18);
+    const alerts = simulation.drainEvents().filter((event) => event.type === 'alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({ team: 'player', targetId: player.id, at: player.position });
+    expect(alerts[0]?.sourceId).toBeUndefined();
+    expect(simulation.state.notifications.some((notification) => (
+      notification.text === '我方部队遭到攻击'
+      && notification.at?.x === player.position.x
+      && notification.at?.z === player.position.z
+    ))).toBe(true);
+  });
+
+  it('rate-limits repeated attacks on the same friendly alert category', () => {
+    const simulation = new GameSimulation(306, 'combat');
+    const harvester = simulation.state.units.find((unit) => unit.id === 'u-fixture-player');
+    const suppressor = simulation.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    expect(harvester).toBeDefined();
+    expect(suppressor).toBeDefined();
+    if (!harvester || !suppressor) return;
+
+    harvester.position = { x: 0, z: 4 };
+    harvester.kind = 'harvester';
+    harvester.radius = UNIT_DEFS.harvester.radius;
+    harvester.maxHp = 5_000;
+    harvester.hp = harvester.maxHp;
+    harvester.order = { type: 'idle' };
+    suppressor.position = { x: 0, z: 0 };
+    suppressor.kind = 'suppressor';
+    suppressor.radius = UNIT_DEFS.suppressor.radius;
+    suppressor.order = { type: 'attack', targetId: harvester.id };
+
+    stepTicks(simulation, 60);
+    const alerts = simulation.drainEvents().filter((event) => event.type === 'alert');
+    expect(alerts).toHaveLength(1);
+    expect(simulation.state.notifications.filter((notification) => notification.text === '采矿车遭到袭击')).toHaveLength(1);
+  });
+
+  it('sends nearby idle defenders to investigate an unseen artillery firing position', () => {
+    const configure = (simulation: GameSimulation): void => {
+      const artillery = simulation.state.units.find((unit) => unit.id === 'u-fixture-player');
+      const defender = simulation.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+      const factory = simulation.state.buildings.find((building) => building.id === 'b-enemy-barracks');
+      expect(artillery).toBeDefined();
+      expect(defender).toBeDefined();
+      expect(factory).toBeDefined();
+      if (!artillery || !defender || !factory) return;
+      artillery.position = { x: 0, z: 0 };
+      artillery.kind = 'artillery';
+      artillery.radius = UNIT_DEFS.artillery.radius;
+      artillery.maxHp = UNIT_DEFS.artillery.maxHp;
+      artillery.hp = artillery.maxHp;
+      artillery.order = { type: 'attack', targetId: factory.id };
+      factory.position = { x: 0, z: 16 };
+      defender.position = { x: 0, z: 15 };
+      defender.order = { type: 'idle' };
+    };
+    const left = new GameSimulation(305, 'combat');
+    const right = new GameSimulation(305, 'combat');
+    configure(left);
+    configure(right);
+
+    stepTicks(left, 1);
+    stepTicks(right, 1);
+    expect(left.state.intel.enemy.visibleEnemyIds).not.toContain('u-fixture-player');
+    stepTicks(left, 15);
+    stepTicks(right, 15);
+
+    const defender = left.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    const factory = left.state.buildings.find((building) => building.id === 'b-enemy-barracks');
+    expect(factory?.hp).toBeLessThan(factory?.maxHp ?? 0);
+    expect(defender?.order.type).toBe('attackMove');
+    expect(defender?.order.target).toEqual({ x: 0, z: 0 });
+    expect(left.state.intel.enemy.visibleEnemyIds).not.toContain('u-fixture-player');
+    expect(left.hashState()).toBe(right.hashState());
+
+    const leftArtillery = left.state.units.find((unit) => unit.id === 'u-fixture-player');
+    const rightArtillery = right.state.units.find((unit) => unit.id === 'u-fixture-player');
+    if (leftArtillery) leftArtillery.hp = 0;
+    if (rightArtillery) rightArtillery.hp = 0;
+    stepTicks(left, 280);
+    stepTicks(right, 280);
+    const returnedDefender = left.state.units.find((unit) => unit.id === 'u-fixture-enemy');
+    expect(returnedDefender ? Math.hypot(returnedDefender.position.x, returnedDefender.position.z - 15) : Infinity)
+      .toBeLessThan(2);
+    expect(left.hashState()).toBe(right.hashState());
+  });
+
   it('destroys the four ruin-review buildings through deterministic disclosed simulation combat', () => {
     const fixtures = ['building-ruin-review', 'building-ruin-review-reduced'];
     const expectedTargets = [
