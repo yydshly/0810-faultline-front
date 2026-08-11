@@ -16,8 +16,23 @@ export interface PointerPosition {
 }
 
 export interface CameraPanDirection {
-  x: -1 | 0 | 1;
-  z: -1 | 0 | 1;
+  x: number;
+  z: number;
+}
+
+export const DEFAULT_EDGE_PAN_MARGIN = 36;
+
+function edgePanAxis(position: number, minimum: number, maximum: number, margin: number): number {
+  if (margin <= 0) return 0;
+  if (position <= minimum + margin) {
+    const depth = Math.min(1, Math.max(0, (minimum + margin - position) / margin));
+    return -Math.sqrt(depth);
+  }
+  if (position >= maximum - margin) {
+    const depth = Math.min(1, Math.max(0, (position - (maximum - margin)) / margin));
+    return Math.sqrt(depth);
+  }
+  return 0;
 }
 
 /** Resolve edge scrolling against the visible part of a possibly clipped stage. */
@@ -25,7 +40,7 @@ export function visibleStageEdgePanDirection(
   pointer: PointerPosition,
   stage: StageViewportRect,
   viewport: ViewportSize,
-  requestedMargin = 14,
+  requestedMargin = DEFAULT_EDGE_PAN_MARGIN,
 ): CameraPanDirection {
   const values = [
     pointer.x, pointer.y,
@@ -48,15 +63,7 @@ export function visibleStageEdgePanDirection(
 
   const horizontalMargin = Math.min(Math.max(0, requestedMargin), (right - left) / 2);
   const verticalMargin = Math.min(Math.max(0, requestedMargin), (bottom - top) / 2);
-  const x = pointer.x <= left + horizontalMargin
-    ? -1
-    : pointer.x >= right - horizontalMargin
-      ? 1
-      : 0;
-  const z = pointer.y <= top + verticalMargin
-    ? -1
-    : pointer.y >= bottom - verticalMargin
-      ? 1
-      : 0;
+  const x = edgePanAxis(pointer.x, left, right, horizontalMargin);
+  const z = edgePanAxis(pointer.y, top, bottom, verticalMargin);
   return { x, z };
 }

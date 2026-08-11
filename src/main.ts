@@ -53,6 +53,23 @@ type SelectionDrag = {
 const SAVE_SLOT_KEY = 'faultline-front.save.v3';
 const AUDIO_MUTED_KEY = 'faultline-front.audio-muted.v1';
 const RENDER_QUALITY_KEY = 'faultline-front.render-quality.v1';
+const KEYBOARD_PAN_SPEED = 25;
+const EDGE_PAN_MAX_SPEED = 42;
+const EDGE_PAN_BLOCKING_SELECTOR = [
+  'button',
+  'a',
+  'input',
+  'select',
+  'textarea',
+  '[role="button"]',
+  '[role="dialog"]',
+  '.ff-topbar',
+  '.ff-left-rail',
+  '.ff-right-rail',
+  '.ff-command-dock',
+  '.ff-minimap-panel',
+  '.ff-drawer-toggle',
+].join(',');
 
 interface SavedDeploymentSlot {
   serialized: string;
@@ -84,6 +101,7 @@ class FaultlineApp {
   private lastFrame = performance.now();
   private animationFrame = 0;
   private pointer = { x: 0, y: 0, inside: false };
+  private edgePanBlocked = false;
   private pressedKeys = new Set<string>();
   private controlGroups = new Map<number, string[]>();
   private lastGroupTap = { group: -1, at: 0 };
@@ -325,9 +343,6 @@ class FaultlineApp {
     stage.addEventListener('pointermove', (event) => this.onPointerMove(event));
     stage.addEventListener('pointerup', (event) => this.onPointerUp(event));
     stage.addEventListener('pointercancel', () => this.cancelPointer());
-    stage.addEventListener('pointerleave', () => {
-      this.pointer.inside = false;
-    });
     stage.addEventListener('contextmenu', (event) => this.onContextMenu(event));
     stage.addEventListener('wheel', (event) => {
       event.preventDefault();
@@ -335,6 +350,12 @@ class FaultlineApp {
     }, { passive: false });
 
     window.addEventListener('resize', () => this.scene?.resize());
+    window.addEventListener('pointermove', (event) => this.trackPointer(event));
+    window.addEventListener('pointerout', (event) => {
+      if (event.relatedTarget !== null) return;
+      this.pointer.inside = false;
+      this.edgePanBlocked = false;
+    });
     window.addEventListener('keydown', (event) => {
       void this.tryUnlockAudio();
       this.onKeyDown(event);
@@ -343,11 +364,27 @@ class FaultlineApp {
     window.addEventListener('blur', () => {
       this.pressedKeys.clear();
       this.middleDrag = null;
+      this.pointer.inside = false;
+      this.edgePanBlocked = false;
     });
   }
 
+  private trackPointer(event: PointerEvent): void {
+    this.pointer = {
+      x: event.clientX,
+      y: event.clientY,
+      inside: event.clientX >= 0
+        && event.clientX <= window.innerWidth
+        && event.clientY >= 0
+        && event.clientY <= window.innerHeight,
+    };
+    const target = event.target;
+    this.edgePanBlocked = target instanceof Element
+      && target.closest(EDGE_PAN_BLOCKING_SELECTOR) !== null;
+  }
+
   private onPointerDown(event: PointerEvent): void {
-    this.pointer = { x: event.clientX, y: event.clientY, inside: true };
+    this.trackPointer(event);
     if (event.button === 1) {
       event.preventDefault();
       this.middleDrag = { x: event.clientX, y: event.clientY };
@@ -367,7 +404,7 @@ class FaultlineApp {
   }
 
   private onPointerMove(event: PointerEvent): void {
-    this.pointer = { x: event.clientX, y: event.clientY, inside: true };
+    this.trackPointer(event);
     if (this.middleDrag && this.scene) {
       const dx = event.clientX - this.middleDrag.x;
       const dy = event.clientY - this.middleDrag.y;
@@ -521,23 +558,24 @@ class FaultlineApp {
 
   private updateCamera(dt: number): void {
     if (!this.scene) return;
-    const speed = 25 * dt;
+    const keyboardSpeed = KEYBOARD_PAN_SPEED * dt;
     let dx = 0;
     let dz = 0;
-    if (this.pressedKeys.has('arrowup')) dz -= speed;
-    if (this.pressedKeys.has('arrowdown')) dz += speed;
-    if (this.pressedKeys.has('arrowleft')) dx -= speed;
-    if (this.pressedKeys.has('arrowright')) dx += speed;
+    if (this.pressedKeys.has('arrowup')) dz -= keyboardSpeed;
+    if (this.pressedKeys.has('arrowdown')) dz += keyboardSpeed;
+    if (this.pressedKeys.has('arrowleft')) dx -= keyboardSpeed;
+    if (this.pressedKeys.has('arrowright')) dx += keyboardSpeed;
 
-    if (this.pointer.inside) {
+    if (this.pointer.inside && !this.edgePanBlocked) {
       const rect = this.hud.stage.getBoundingClientRect();
       const direction = visibleStageEdgePanDirection(
         this.pointer,
         rect,
         { width: window.innerWidth, height: window.innerHeight },
       );
-      dx += direction.x * speed;
-      dz += direction.z * speed;
+      const edgeSpeed = EDGE_PAN_MAX_SPEED * dt;
+      dx += direction.x * edgeSpeed;
+      dz += direction.z * edgeSpeed;
     }
     if (dx !== 0 || dz !== 0) this.scene.pan(dx, dz);
   }

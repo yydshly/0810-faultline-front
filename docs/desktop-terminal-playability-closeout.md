@@ -93,8 +93,19 @@ The earlier desktop playthrough exposed two camera/selection symptoms:
   the late-mission camera scale.
 
 Edge-pan now uses the visible intersection of the stage and browser viewport.
-Building acquisition has a larger screen-space fallback while still excluding
-hidden, resource, destroyed, destruction-in-progress, and authored-ruin roots.
+The activation band is 36 CSS pixels instead of the previous 14-pixel binary
+strip, and movement ramps progressively to a 42 world-unit/second maximum as
+the pointer approaches the visible battlefield edge. Pointer tracking continues
+at window level when the cursor crosses from the canvas into non-interactive
+shell space, while buttons, dialogs, command docks, the minimap, and both rails
+explicitly suppress edge-pan. This keeps the right command rail usable without
+making the actual battlefield edge feel unresponsive.
+
+Regression coverage locks the progressive response and the 1280 x 720 layout
+where the visible battlefield ends at x=964 and the remaining 316 pixels belong
+to the command rail. Building acquisition has a larger screen-space fallback
+while still excluding hidden, resource, destroyed, destruction-in-progress,
+and authored-ruin roots.
 
 The existing minimap is also an explicit camera navigation surface: desktop
 left-click and drag reposition camera focus, while Enter or Space activates the
