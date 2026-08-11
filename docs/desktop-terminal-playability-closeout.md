@@ -102,6 +102,9 @@ shell space. A matching 36-pixel viewport-edge fallback keeps all four physical
 screen edges active, including the far side of the fixed command rail. Only
 actual buttons, links, form controls, dialogs, and the interactive minimap
 suppress edge-pan; empty topbar, dock, and rail surfaces no longer disable it.
+When the pointer crosses the top edge into browser chrome, the last physical-edge
+intent is retained instead of being cleared by `pointerout`; re-entering the page,
+window blur, or hiding the tab immediately cancels that retained motion.
 
 Edge, arrow-key, and middle-drag input is converted from screen space through
 the fixed 45-degree camera yaw before changing the world target. Vertical input

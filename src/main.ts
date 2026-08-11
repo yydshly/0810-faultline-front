@@ -4,6 +4,7 @@ import { GameAudio } from './game/audio';
 import {
   EDGE_PAN_BLOCKING_SELECTOR,
   limitCameraPanMagnitude,
+  retainedViewportEdgePointer,
   screenPanToWorldPan,
   smoothCameraPanVelocity,
   visibleStageEdgePanDirection,
@@ -348,6 +349,15 @@ class FaultlineApp {
     window.addEventListener('pointermove', (event) => this.trackPointer(event));
     window.addEventListener('pointerout', (event) => {
       if (event.relatedTarget !== null) return;
+      const retained = retainedViewportEdgePointer(
+        { x: event.clientX, y: event.clientY },
+        { width: window.innerWidth, height: window.innerHeight },
+      );
+      if (retained) {
+        this.pointer = { ...retained, inside: true };
+        this.edgePanBlocked = false;
+        return;
+      }
       this.pointer.inside = false;
       this.edgePanBlocked = false;
       this.cameraPanVelocity = { x: 0, z: 0 };
@@ -360,6 +370,13 @@ class FaultlineApp {
     window.addEventListener('blur', () => {
       this.pressedKeys.clear();
       this.middleDrag = null;
+      this.pointer.inside = false;
+      this.edgePanBlocked = false;
+      this.cameraPanVelocity = { x: 0, z: 0 };
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) return;
+      this.pressedKeys.clear();
       this.pointer.inside = false;
       this.edgePanBlocked = false;
       this.cameraPanVelocity = { x: 0, z: 0 };

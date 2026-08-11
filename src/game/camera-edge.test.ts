@@ -4,6 +4,7 @@ import {
   boundedCameraPanDelta,
   EDGE_PAN_BLOCKING_SELECTOR,
   limitCameraPanMagnitude,
+  retainedViewportEdgePointer,
   screenPanToWorldPan,
   smoothCameraPanVelocity,
   visibleStageEdgePanDirection,
@@ -70,6 +71,28 @@ describe('desktop visible-stage edge scrolling', () => {
       stage,
       viewport,
     ).z).toBeGreaterThan(0.9);
+  });
+
+  it('retains top-edge intent when the pointer crosses into browser chrome', () => {
+    expect(retainedViewportEdgePointer(
+      { x: 500, y: -1 },
+      { width: 1280, height: 720 },
+    )).toEqual({ x: 500, y: 0 });
+    expect(retainedViewportEdgePointer(
+      { x: 1281, y: 300 },
+      { width: 1280, height: 720 },
+    )).toEqual({ x: 1280, y: 300 });
+  });
+
+  it('does not retain a pointer that exits away from a physical edge', () => {
+    expect(retainedViewportEdgePointer(
+      { x: 500, y: 40 },
+      { width: 1280, height: 720 },
+    )).toBeNull();
+    expect(retainedViewportEdgePointer(
+      { x: 500, y: -40 },
+      { width: 1280, height: 720 },
+    )).toBeNull();
   });
 
   it('blocks real controls without blocking the topbar, dock, or rail surfaces', () => {

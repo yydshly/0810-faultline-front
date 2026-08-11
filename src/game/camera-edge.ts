@@ -28,6 +28,7 @@ export interface CameraPanBounds {
 
 export const DEFAULT_EDGE_PAN_MARGIN = 36;
 export const DEFAULT_VIEWPORT_EDGE_PAN_MARGIN = DEFAULT_EDGE_PAN_MARGIN;
+export const DEFAULT_POINTER_EXIT_EDGE_TOLERANCE = 12;
 export const DEFAULT_CAMERA_ELEVATION_RADIANS = (55 * Math.PI) / 180;
 export const DEFAULT_CAMERA_PAN_ACCELERATION = 4;
 export const DEFAULT_CAMERA_PAN_DECELERATION = 14;
@@ -41,6 +42,33 @@ export const EDGE_PAN_BLOCKING_SELECTOR = [
   '[role="dialog"]',
   '.ff-minimap-panel',
 ].join(',');
+
+/** Keep the last physical-edge intent when the pointer crosses into browser chrome. */
+export function retainedViewportEdgePointer(
+  pointer: PointerPosition,
+  viewport: ViewportSize,
+  tolerance = DEFAULT_POINTER_EXIT_EDGE_TOLERANCE,
+): PointerPosition | null {
+  const values = [pointer.x, pointer.y, viewport.width, viewport.height, tolerance];
+  if (!values.every(Number.isFinite) || viewport.width <= 0 || viewport.height <= 0 || tolerance < 0) {
+    return null;
+  }
+  const withinHorizontalExit = pointer.x >= -tolerance && pointer.x <= viewport.width + tolerance;
+  const withinVerticalExit = pointer.y >= -tolerance && pointer.y <= viewport.height + tolerance;
+  const atLeft = withinVerticalExit && pointer.x <= tolerance && pointer.x >= -tolerance;
+  const atRight = withinVerticalExit
+    && pointer.x >= viewport.width - tolerance
+    && pointer.x <= viewport.width + tolerance;
+  const atTop = withinHorizontalExit && pointer.y <= tolerance && pointer.y >= -tolerance;
+  const atBottom = withinHorizontalExit
+    && pointer.y >= viewport.height - tolerance
+    && pointer.y <= viewport.height + tolerance;
+  if (!atLeft && !atRight && !atTop && !atBottom) return null;
+  return {
+    x: atLeft ? 0 : atRight ? viewport.width : Math.min(viewport.width, Math.max(0, pointer.x)),
+    y: atTop ? 0 : atBottom ? viewport.height : Math.min(viewport.height, Math.max(0, pointer.y)),
+  };
+}
 
 export function screenPanToWorldPan(
   screenX: number,
